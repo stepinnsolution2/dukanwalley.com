@@ -5,9 +5,14 @@ import { isStaff } from "@/lib/permissions";
 
 
 export async function proxy(req: NextRequest) {
+  // Behind Nginx the app sees plain http, but on https Auth.js stores the session in
+  // the "__Secure-" prefixed cookie, so pick the cookie name from the visitor's protocol.
+  const secureCookie =
+    req.headers.get("x-forwarded-proto") === "https" || req.nextUrl.protocol === "https:";
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET,
+    secureCookie,
   });
   const { pathname } = req.nextUrl;
   const role = token?.role as string | undefined;
