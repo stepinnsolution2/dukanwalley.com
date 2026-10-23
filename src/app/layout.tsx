@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Marketplace",
-  description: "Multi-vendor marketplace with admin, sales, and vendor portals",
+  title: { default: "DukanWalley", template: "%s | DukanWalley" },
+  description: "DukanWalley — multiple sellers, endless choices.",
 };
 
 export default function RootLayout({

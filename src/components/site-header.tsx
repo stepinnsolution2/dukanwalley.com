@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { CartBackdrop, CartButton, CartPanel } from "@/components/cart-drawer";
@@ -15,11 +16,16 @@ export async function SiteHeader() {
       <CartBackdrop />
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-md">
         <div className={`${CONTAINER} flex flex-wrap items-center justify-between gap-3 py-3`}>
-          <Link
-            href="/"
-            className="text-lg font-semibold tracking-tight text-teal-800"
-          >
-            Marketplace
+          <Link href="/" className="flex items-center gap-2" aria-label="DukanWalley home">
+            <Image src="/logo-mark.png" alt="" width={50} height={40} priority className="h-10 w-auto" />
+            <Image
+              src="/logo-wordmark.png"
+              alt="DukanWalley"
+              width={139}
+              height={24}
+              priority
+              className="h-6 w-auto"
+            />
           </Link>
           <nav className="flex flex-wrap items-center gap-2 text-sm font-medium text-zinc-700 sm:gap-4">
             <form
