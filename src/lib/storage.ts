@@ -45,9 +45,7 @@ export function mediaUrl(key: string) {
 }
 
 /** True for URLs we issued (media stored here), used to accept relative media paths in forms. */
-export function isStoredMediaUrl(url: string) {
-  return /^\/api\/media\/[a-z]+\/\d{6}\/[A-Za-z0-9_-]+\.[a-z0-9]+$/.test(url);
-}
+export { isStoredMediaUrl } from "./media-url";
 
 /**
  * Streams an upload to disk without buffering it in memory, enforcing the size limit and

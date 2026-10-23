@@ -6,6 +6,7 @@ import { MARKETS, normalizeMobile } from "@/lib/markets";
 import { hashPassword } from "@/lib/password";
 import type { Permission } from "@/lib/permissions";
 import { KycStatus, Market, UserRole, VendorRestriction } from "@/generated/prisma/enums";
+import { uniqueVendorSlug } from "@/lib/vendor-slug";
 
 const createSchema = z.object({
   email: z.string().email(),
@@ -106,6 +107,7 @@ export async function POST(req: Request) {
       vendorProfile: {
         create: {
           storeName: d.storeName,
+          slug: await uniqueVendorSlug(d.storeName),
           phone,
           addressLine1: d.addressLine1,
           city: d.city,

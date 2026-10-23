@@ -12,6 +12,7 @@ import { inheritedAttributeDefs, sellableVendorWhere, storefrontProductWhere } f
 import { getCurrentMarket } from "@/lib/market-session";
 import { formatMoney, MARKETS } from "@/lib/markets";
 import { absoluteUrl, breadcrumbJsonLd, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
+import { storeHref } from "@/lib/vendor-slug";
 import { AddToCart, type PickerAxis } from "./add-to-cart";
 import { ProductViewTracker } from "./product-detail-client";
 import { ProductGallery } from "./product-gallery";
@@ -208,7 +209,7 @@ export default async function ProductPage({ params }: Props) {
                 </p>
                 <p className="text-sm text-zinc-500">
                   Sold by{" "}
-                  <Link href={`/products?seller=${product.vendor.id}`} className="font-medium text-zinc-700 hover:text-teal-700">
+                  <Link href={storeHref(product.vendor)} className="font-medium text-zinc-700 hover:text-teal-700">
                     {product.vendor.storeName}
                   </Link>{" "}
                   ·{" "}

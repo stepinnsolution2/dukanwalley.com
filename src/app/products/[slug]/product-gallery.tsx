@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { canOptimizeImage } from "@/lib/media-url";
 import { useProductSelection } from "./product-selection";
 
 /** `color`: the colour a photo shows (null = any), so picking a colour can jump to it. */
@@ -61,7 +62,9 @@ function VideoSlide({ url, active }: { url: string; active: boolean }) {
 
 function Thumb({ item, name }: { item: GalleryMedia; name: string }) {
   if (item.type === "image") {
-    return <Image src={item.url} alt={name} fill unoptimized className="object-cover" sizes="80px" />;
+    return (
+      <Image src={item.url} alt={name} fill unoptimized={!canOptimizeImage(item.url)} className="object-cover" sizes="80px" />
+    );
   }
   const embed = embedUrl(item.url);
   return (
@@ -302,7 +305,7 @@ export function ProductGallery({ media, name }: { media: GalleryMedia[]; name: s
                     src={item.url}
                     alt={name}
                     fill
-                    unoptimized
+                    unoptimized={!canOptimizeImage(item.url)}
                     preload={i === 0}
                     className="object-cover"
                     sizes="(max-width:1024px) 100vw, 50vw"

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatMoney, type MarketCode } from "@/lib/markets";
+import { canOptimizeImage } from "@/lib/media-url";
 
 type TileProduct = {
   slug: string;
@@ -23,7 +24,7 @@ export function ProductTile({ product: p, market }: { product: TileProduct; mark
             src={p.images[0].url}
             alt={p.name}
             fill
-            unoptimized
+            unoptimized={!canOptimizeImage(p.images[0].url)}
             className="object-cover transition group-hover:scale-[1.03]"
             sizes="(max-width:640px) 33vw, (max-width:1024px) 20vw, 15vw"
           />

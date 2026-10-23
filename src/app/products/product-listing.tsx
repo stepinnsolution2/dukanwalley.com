@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { categoryAndDescendantIds, inheritedAttributeDefs, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
 import { formatMoney, MARKETS } from "@/lib/markets";
+import { canOptimizeImage } from "@/lib/media-url";
 import { breadcrumbJsonLd, SITE_NAME, type Crumb } from "@/lib/seo";
 import { isColorKey } from "@/lib/variants";
 import type { Prisma } from "@/generated/prisma/client";
@@ -49,6 +50,11 @@ export function listingHref(params: SP) {
  * indexable; search, filters and sort orders are noindex and point at the plain listing, so
  * crawlers don't index thousands of near-duplicate filter combinations.
  */
+/** Any search, filter or sort param besides the listing's own keys (page, plus e.g. category). */
+export function isFilteredListing(sp: SP, ownKeys: string[] = []) {
+  return Object.entries(sp).some(([k, v]) => k !== "page" && !ownKeys.includes(k) && list(v).length);
+}
+
 export function listingMetadata(
   sp: SP,
   category?: { name: string; slug: string; parentName?: string | null },
@@ -56,7 +62,7 @@ export function listingMetadata(
   const page = Math.max(1, Math.trunc(Number(one(sp.page))) || 1);
   const base = category ? `/category/${category.slug}` : "/products";
   const q = one(sp.q);
-  const filtered = Object.entries(sp).some(([k, v]) => k !== "page" && k !== "category" && list(v).length);
+  const filtered = isFilteredListing(sp, ["category"]);
   const pageSuffix = page > 1 ? ` – Page ${page}` : "";
   const title = q
     ? `Search results for “${q}”`
@@ -482,7 +488,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
                               src={p.images[0].url}
                               alt={p.name}
                               fill
-                              unoptimized
+                              unoptimized={!canOptimizeImage(p.images[0].url)}
                               className="object-cover transition duration-300 group-hover:scale-105"
                               sizes="(max-width:768px) 50vw, (max-width:1280px) 33vw, 25vw"
                             />

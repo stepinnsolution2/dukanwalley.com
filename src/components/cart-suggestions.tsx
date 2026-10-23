@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/cart-context";
 import { formatMoney, type MarketCode } from "@/lib/markets";
+import { canOptimizeImage } from "@/lib/media-url";
 
 type Suggestion = {
   id: string;
@@ -97,7 +98,7 @@ export function CartSuggestions({ active }: { active: boolean }) {
             <Link href={`/products/${s.slug}`} onClick={() => logEvent("CLICK", [s])} className="group block">
               <div className="relative aspect-square bg-zinc-100">
                 {s.imageUrl ? (
-                  <Image src={s.imageUrl} alt={s.name} fill unoptimized className="object-cover transition group-hover:scale-[1.03]" sizes="(max-width:1024px) 128px, 160px" />
+                  <Image src={s.imageUrl} alt={s.name} fill unoptimized={!canOptimizeImage(s.imageUrl)} className="object-cover transition group-hover:scale-[1.03]" sizes="(max-width:1024px) 128px, 160px" />
                 ) : null}
               </div>
               <div className="px-2 pt-1.5">

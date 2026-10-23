@@ -10,6 +10,7 @@ import { sellableVendorWhere, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
 import { PAGE_WIDE } from "@/lib/page-layout";
 import { absoluteUrl, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
+import { storeHref } from "@/lib/vendor-slug";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,7 @@ export default async function HomePage() {
     }),
     prisma.vendorProfile.findMany({
       where: { ...sellableVendorWhere, market, isTopSeller: true, products: { some: live } },
-      select: { id: true, storeName: true, logoUrl: true },
+      select: { id: true, slug: true, storeName: true, logoUrl: true },
       orderBy: { storeName: "asc" },
       take: 16,
     }),
@@ -109,7 +110,7 @@ export default async function HomePage() {
             <ul className="flex gap-3 overflow-x-auto pb-1">
               {topSellers.map((s) => (
                 <li key={s.id} className="w-24 shrink-0">
-                  <Link href={`/products?seller=${s.id}`} className="flex flex-col items-center gap-1.5 text-center hover:text-teal-700">
+                  <Link href={storeHref(s)} className="flex flex-col items-center gap-1.5 text-center hover:text-teal-700">
                     <SellerAvatar name={s.storeName} logoUrl={s.logoUrl} size={80} />
                     <span className="line-clamp-2 text-xs font-medium">{s.storeName}</span>
                   </Link>

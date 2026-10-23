@@ -8,6 +8,7 @@ import type { Cart } from "@/components/cart-context";
 import { CartSuggestions } from "@/components/cart-suggestions";
 import { FavoriteButton } from "@/components/favorite-button";
 import { PaymentBadges } from "@/components/payment-badges";
+import { canOptimizeImage } from "@/lib/media-url";
 
 function TrashIcon() {
   return (
@@ -79,7 +80,7 @@ export function CartContents({
                   className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-100"
                 >
                   {item.product.images[0] ? (
-                    <Image src={item.product.images[0].url} alt="" fill unoptimized className="object-cover" sizes="80px" />
+                    <Image src={item.product.images[0].url} alt="" fill unoptimized={!canOptimizeImage(item.product.images[0].url)} className="object-cover" sizes="80px" />
                   ) : null}
                 </Link>
                 <div className="flex min-w-0 flex-1 flex-col justify-between gap-2">

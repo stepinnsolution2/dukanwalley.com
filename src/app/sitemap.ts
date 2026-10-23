@@ -8,7 +8,7 @@ import { absoluteUrl } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, categories, listedInDefaultMarket] = await Promise.all([
+  const [products, categories, listedInDefaultMarket, stores] = await Promise.all([
     // Same visibility rule as the product page itself.
     prisma.product.findMany({
       where: { approvalStatus: "APPROVED", displayOnStorefront: true, vendor: sellableVendorWhere },
@@ -18,6 +18,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     prisma.category.findMany({ select: { id: true, slug: true, parentId: true } }),
     // Category pages list the default market to crawlers, so only include categories with products there.
     prisma.product.groupBy({ by: ["categoryId"], where: storefrontProductWhere(DEFAULT_MARKET), _max: { updatedAt: true } }),
+    // Store pages, for stores with something listed in the default market.
+    prisma.vendorProfile.findMany({
+      where: { ...sellableVendorWhere, slug: { not: null }, products: { some: storefrontProductWhere(DEFAULT_MARKET) } },
+      select: { slug: true, updatedAt: true },
+    }),
   ]);
 
   const latestByCategory = new Map(listedInDefaultMarket.map((g) => [g.categoryId, g._max.updatedAt]));
@@ -41,6 +46,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl("/sellers"), changeFrequency: "weekly", priority: 0.5 },
     { url: absoluteUrl("/vendor/register"), changeFrequency: "monthly", priority: 0.3 },
     ...categoryEntries,
+    ...stores.map((s) => ({
+      url: absoluteUrl(`/store/${s.slug}`),
+      lastModified: s.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.5,
+    })),
     ...products.map((p) => ({
       url: absoluteUrl(`/products/${p.slug}`),
       lastModified: p.updatedAt,

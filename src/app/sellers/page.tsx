@@ -9,6 +9,7 @@ import { getCurrentMarket } from "@/lib/market-session";
 import { MARKETS } from "@/lib/markets";
 import { PAGE_WIDE } from "@/lib/page-layout";
 import { SITE_NAME } from "@/lib/seo";
+import { storeHref } from "@/lib/vendor-slug";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function SellersPage() {
     where: { ...sellableVendorWhere, market, products: { some: live } },
     select: {
       id: true,
+      slug: true,
       storeName: true,
       logoUrl: true,
       city: true,
@@ -51,7 +53,7 @@ export default async function SellersPage() {
             {sellers.map((s) => (
               <li key={s.id}>
                 <Link
-                  href={`/products?seller=${s.id}`}
+                  href={storeHref(s)}
                   className="flex h-full flex-col items-center gap-2 rounded-lg border border-zinc-200 bg-white p-3 text-center hover:border-teal-300 hover:shadow-sm"
                 >
                   <SellerAvatar name={s.storeName} logoUrl={s.logoUrl} />

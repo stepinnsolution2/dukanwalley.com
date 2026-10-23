@@ -123,6 +123,8 @@ model VendorProfile {
   id                   String            @id @default(cuid())
   userId               String            @unique
   storeName            String
+  /// Public store URL: /store/<slug>. Set when the store is created and kept if the name changes.
+  slug                 String?           @unique
   phone                String
   logoUrl              String?
   bannerUrl            String?

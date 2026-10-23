@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { peekCartOwner } from "@/lib/cart-session";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/markets";
+import { canOptimizeImage } from "@/lib/media-url";
 import { PAGE_WIDE } from "@/lib/page-layout";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +49,7 @@ export default async function FavoritesPage() {
                   <div className="relative aspect-square bg-zinc-100">
                     <Link href={`/products/${p.slug}`}>
                       {p.images[0] ? (
-                        <Image src={p.images[0].url} alt="" fill unoptimized className="object-cover" sizes="300px" />
+                        <Image src={p.images[0].url} alt="" fill unoptimized={!canOptimizeImage(p.images[0].url)} className="object-cover" sizes="300px" />
                       ) : null}
                     </Link>
                     <FavoriteButton

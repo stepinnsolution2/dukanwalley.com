@@ -99,6 +99,7 @@ async function main() {
     create: {
       userId: vendorUser.id,
       storeName: "Urban Supply Co.",
+      slug: "urban-supply-co",
       phone: "+923001234567",
       addressLine1: "Plot 12, Shahrah-e-Faisal",
       city: "Karachi",
@@ -251,6 +252,7 @@ async function main() {
     create: {
       userId: uaeVendorUser.id,
       storeName: "Gulf Gadgets Trading",
+      slug: "gulf-gadgets-trading",
       phone: "+971501234567",
       addressLine1: "Office 804, Al Quoz Industrial Area 3",
       city: "Dubai",
