@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +15,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "DukanWalley", template: "%s | DukanWalley" },
-  description: "DukanWalley — multiple sellers, endless choices.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
+  description: `${SITE_NAME} — ${SITE_TAGLINE.toLowerCase()}.`,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_PK",
+    images: [{ url: "/logo.png", width: 800, height: 514, alt: SITE_NAME }],
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({

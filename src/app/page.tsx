@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { JsonLd } from "@/components/json-ld";
 import { ProductTile } from "@/components/product-tile";
 import { SellerAvatar } from "@/components/seller-avatar";
 import { SiteFooter } from "@/components/site-footer";
@@ -7,8 +9,36 @@ import { prisma } from "@/lib/db";
 import { sellableVendorWhere, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
 import { PAGE_WIDE } from "@/lib/page-layout";
+import { absoluteUrl, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: { absolute: `${SITE_NAME} – ${SITE_TAGLINE}` },
+  description: `Shop products from multiple verified sellers on ${SITE_NAME}. Browse categories, compare prices and order online in Pakistan and the UAE.`,
+  alternates: { canonical: "/" },
+};
+
+const siteJsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: absoluteUrl("/logo.png"),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/products?q={search_term_string}` },
+      "query-input": "required name=search_term_string",
+    },
+  },
+];
 
 const grid = "grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8";
 
@@ -39,6 +69,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={siteJsonLd} />
       <SiteHeader />
       <main className={`${PAGE_WIDE} flex flex-col gap-5`}>
         <section className="rounded-xl bg-gradient-to-br from-teal-900 via-teal-800 to-zinc-900 px-5 py-8 text-white shadow sm:px-8">

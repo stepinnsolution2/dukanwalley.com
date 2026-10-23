@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SellerAvatar } from "@/components/seller-avatar";
 import { SiteFooter } from "@/components/site-footer";
@@ -7,8 +8,15 @@ import { sellableVendorWhere, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
 import { MARKETS } from "@/lib/markets";
 import { PAGE_WIDE } from "@/lib/page-layout";
+import { SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Sellers",
+  description: `Browse the verified stores selling on ${SITE_NAME} and shop each seller's products.`,
+  alternates: { canonical: "/sellers" },
+};
 
 export default async function SellersPage() {
   const market = await getCurrentMarket();

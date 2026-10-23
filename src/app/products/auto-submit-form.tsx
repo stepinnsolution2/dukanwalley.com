@@ -4,10 +4,18 @@
  * A GET form that applies itself when a checkbox, radio or select changes, so filters update
  * without an Apply click. Text/number inputs apply on Enter (or the Apply button).
  */
-export function AutoSubmitForm({ children, className }: { children: React.ReactNode; className?: string }) {
+export function AutoSubmitForm({
+  children,
+  className,
+  action = "/products",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  action?: string;
+}) {
   return (
     <form
-      action="/products"
+      action={action}
       className={className}
       onChange={(e) => {
         const t = e.target as EventTarget;

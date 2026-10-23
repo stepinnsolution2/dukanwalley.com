@@ -1,0 +1,52 @@
+import type { MetadataRoute } from "next";
+import { prisma } from "@/lib/db";
+import { categoryAndDescendantIds, sellableVendorWhere, storefrontProductWhere } from "@/lib/catalog";
+import { DEFAULT_MARKET } from "@/lib/markets";
+import { absoluteUrl } from "@/lib/seo";
+
+// Built per request so new and removed products show up without a redeploy.
+export const dynamic = "force-dynamic";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [products, categories, listedInDefaultMarket] = await Promise.all([
+    // Same visibility rule as the product page itself.
+    prisma.product.findMany({
+      where: { approvalStatus: "APPROVED", displayOnStorefront: true, vendor: sellableVendorWhere },
+      select: { slug: true, updatedAt: true, images: { orderBy: { sortOrder: "asc" }, select: { url: true }, take: 5 } },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.category.findMany({ select: { id: true, slug: true, parentId: true } }),
+    // Category pages list the default market to crawlers, so only include categories with products there.
+    prisma.product.groupBy({ by: ["categoryId"], where: storefrontProductWhere(DEFAULT_MARKET), _max: { updatedAt: true } }),
+  ]);
+
+  const latestByCategory = new Map(listedInDefaultMarket.map((g) => [g.categoryId, g._max.updatedAt]));
+  const categoryEntries = categories.flatMap((c) => {
+    const dates = categoryAndDescendantIds(c.id, categories)
+      .map((id) => latestByCategory.get(id))
+      .filter((d): d is Date => !!d);
+    if (!dates.length) return [];
+    return [{
+      url: absoluteUrl(`/category/${c.slug}`),
+      lastModified: new Date(Math.max(...dates.map((d) => d.getTime()))),
+      changeFrequency: "daily" as const,
+      priority: c.parentId ? 0.7 : 0.8,
+    }];
+  });
+
+  const newest = products[0]?.updatedAt ?? new Date();
+  return [
+    { url: absoluteUrl("/"), lastModified: newest, changeFrequency: "daily", priority: 1 },
+    { url: absoluteUrl("/products"), lastModified: newest, changeFrequency: "daily", priority: 0.8 },
+    { url: absoluteUrl("/sellers"), changeFrequency: "weekly", priority: 0.5 },
+    { url: absoluteUrl("/vendor/register"), changeFrequency: "monthly", priority: 0.3 },
+    ...categoryEntries,
+    ...products.map((p) => ({
+      url: absoluteUrl(`/products/${p.slug}`),
+      lastModified: p.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+      images: p.images.map((i) => absoluteUrl(i.url)),
+    })),
+  ];
+}
