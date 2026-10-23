@@ -6,6 +6,7 @@ import {
   type GatewayStatus,
   type PaymentRedirect,
 } from "@/lib/payments/common";
+import { integrationSettings } from "@/lib/integration-settings";
 
 // Easypay (Easypaisa) hosted checkout per the Easypaisa merchant integration guide:
 //  1. POST to Index.jsf with an AES-encrypted merchantHashedReq.
@@ -18,16 +19,18 @@ const HOSTS = {
   production: "https://easypay.easypaisa.com.pk",
 } as const;
 
-function config() {
-  const storeId = process.env.EASYPAISA_STORE_ID;
-  const hashKey = process.env.EASYPAISA_HASH_KEY;
-  const username = process.env.EASYPAISA_USERNAME;
-  const password = process.env.EASYPAISA_PASSWORD;
-  const accountNum = process.env.EASYPAISA_ACCOUNT_NUM;
+/** Credentials from Admin › Settings, falling back to .env. */
+async function config() {
+  const s = await integrationSettings();
+  const storeId = s.EASYPAISA_STORE_ID;
+  const hashKey = s.EASYPAISA_HASH_KEY;
+  const username = s.EASYPAISA_USERNAME;
+  const password = s.EASYPAISA_PASSWORD;
+  const accountNum = s.EASYPAISA_ACCOUNT_NUM;
   // Inquiry credentials are required too: the return redirect isn't signed, so a payment
   // can only be confirmed through the inquire-transaction API.
   if (!storeId || !hashKey || !username || !password || !accountNum) return null;
-  const env = process.env.EASYPAISA_ENV === "production" ? "production" : "sandbox";
+  const env = s.EASYPAISA_ENV === "production" ? "production" : "sandbox";
   const host = (process.env.EASYPAISA_BASE_URL ?? HOSTS[env]).replace(/\/$/, "");
   return {
     storeId,
@@ -41,8 +44,8 @@ function config() {
   };
 }
 
-export function isEasypaisaConfigured() {
-  return config() !== null;
+export async function isEasypaisaConfigured() {
+  return (await config()) !== null;
 }
 
 /** merchantHashedReq: AES/ECB/PKCS5 of "k=v&…" (present fields, alphabetical), base64. */
@@ -57,11 +60,11 @@ export function easypaisaHashedRequest(fields: Record<string, string>, hashKey: 
   return Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]).toString("base64");
 }
 
-export function easypaisaCheckout(
+export async function easypaisaCheckout(
   order: GatewayOrder,
   opts: { kind: "wallet" | "card"; orderRefNum: string; tokenPostBackUrl: string; mobileLocal?: string },
-): PaymentRedirect {
-  const c = config();
+): Promise<PaymentRedirect> {
+  const c = await config();
   if (!c) throw new Error("Easypaisa is not configured");
   const hashed: Record<string, string> = {
     amount: (order.totalMinor / 100).toFixed(1),
@@ -83,15 +86,15 @@ export function easypaisaCheckout(
 }
 
 /** Step 2: forward Easypay's auth_token to Confirm.jsf, naming where to return afterwards. */
-export function easypaisaConfirmForm(authToken: string, finalPostBackUrl: string) {
-  const c = config();
+export async function easypaisaConfirmForm(authToken: string, finalPostBackUrl: string) {
+  const c = await config();
   if (!c) throw new Error("Easypaisa is not configured");
   return { action: c.confirmUrl, fields: { auth_token: authToken, postBackURL: finalPostBackUrl } };
 }
 
 /** Inquire-transaction API: the only trusted source of an Easypaisa payment's status. */
 export async function easypaisaInquire(orderRefNum: string, expectedMinor: number): Promise<GatewayStatus> {
-  const c = config();
+  const c = await config();
   if (!c) return { state: "pending", detail: "easypaisa not configured" };
   try {
     const res = await fetch(c.inquiryUrl, {

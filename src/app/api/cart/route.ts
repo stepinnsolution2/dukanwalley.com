@@ -87,7 +87,7 @@ async function cartResponse(cart: LoadedCart) {
   return NextResponse.json({
     cart: { ...cart, items },
     market,
-    paymentMethods: availablePaymentMethods(market),
+    paymentMethods: await availablePaymentMethods(market),
     rewards,
   });
 }

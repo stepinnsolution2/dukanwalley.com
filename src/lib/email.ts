@@ -1,19 +1,18 @@
 import nodemailer from "nodemailer";
+import { integrationSettings, type IntegrationSettings } from "@/lib/integration-settings";
 
-function getTransport() {
-  const host = process.env.SMTP_HOST;
+/** SMTP from Admin › Settings, falling back to .env. Null when no host is set (emails are logged). */
+export function getTransport(s: IntegrationSettings) {
+  const host = s.SMTP_HOST;
   if (!host) return null;
+  const port = Number(s.SMTP_PORT ?? 587);
   return nodemailer.createTransport({
     host,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: false,
-    auth:
-      process.env.SMTP_USER && process.env.SMTP_PASSWORD
-        ? {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASSWORD,
-          }
-        : undefined,
+    port,
+    // 465 is implicit TLS; other ports (587) upgrade with STARTTLS.
+    secure: port === 465,
+    connectionTimeout: 15_000,
+    auth: s.SMTP_USER && s.SMTP_PASSWORD ? { user: s.SMTP_USER, pass: s.SMTP_PASSWORD } : undefined,
   });
 }
 
@@ -23,8 +22,9 @@ export async function sendEmail(opts: {
   text: string;
   html?: string;
 }) {
-  const from = process.env.EMAIL_FROM ?? "Marketplace <noreply@localhost>";
-  const transport = getTransport();
+  const s = await integrationSettings();
+  const from = s.EMAIL_FROM ?? "DukanWalley <noreply@localhost>";
+  const transport = getTransport(s);
   if (!transport) {
     console.info("[email:stub]", { from, ...opts });
     return;

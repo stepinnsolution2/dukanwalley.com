@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const fields: Record<string, string> = {};
   for (const [k, v] of form ?? []) if (typeof v === "string") fields[k] = v;
 
-  if (!verifyJazzCashResponse(fields)) {
+  if (!(await verifyJazzCashResponse(fields))) {
     console.warn("[jazzcash] return with invalid signature", fields.pp_TxnRefNo);
     return redirect("/cart?payment=failed");
   }

@@ -6,6 +6,7 @@ import {
   type GatewayStatus,
   type PaymentRedirect,
 } from "@/lib/payments/common";
+import { integrationSettings } from "@/lib/integration-settings";
 
 // JazzCash Payment Portal ("page redirection") per the JazzCash merchant integration guide v4.2.
 // The buyer is posted to JazzCash's hosted page; the result is posted back to pp_ReturnURL,
@@ -28,19 +29,21 @@ const PAID_CODES = new Set(["000", "121"]);
 /** Waiting on the customer or bank (wallet approval, OTC, 3DS). */
 const PENDING_CODES = new Set(["124", "157", "210"]);
 
-function config() {
-  const merchantId = process.env.JAZZCASH_MERCHANT_ID;
-  const password = process.env.JAZZCASH_PASSWORD;
-  const salt = process.env.JAZZCASH_INTEGRITY_SALT;
+/** Credentials from Admin › Settings, falling back to .env. */
+async function config() {
+  const s = await integrationSettings();
+  const merchantId = s.JAZZCASH_MERCHANT_ID;
+  const password = s.JAZZCASH_PASSWORD;
+  const salt = s.JAZZCASH_INTEGRITY_SALT;
   if (!merchantId || !password || !salt) return null;
-  const env = process.env.JAZZCASH_ENV === "production" ? "production" : "sandbox";
+  const env = s.JAZZCASH_ENV === "production" ? "production" : "sandbox";
   return {
     merchantId,
     password,
     salt,
     version: process.env.JAZZCASH_VERSION ?? "1.1",
     checkoutUrl: process.env.JAZZCASH_CHECKOUT_URL ?? URLS[env].checkout,
-    inquiryUrl: process.env.JAZZCASH_INQUIRY_URL ?? URLS[env].inquiry,
+    inquiryUrl: s.JAZZCASH_INQUIRY_URL ?? URLS[env].inquiry,
     txnType: {
       wallet: process.env.JAZZCASH_WALLET_TXN_TYPE ?? "MWALLET",
       card: process.env.JAZZCASH_CARD_TXN_TYPE ?? "MPAY",
@@ -48,8 +51,8 @@ function config() {
   };
 }
 
-export function isJazzCashConfigured() {
-  return config() !== null;
+export async function isJazzCashConfigured() {
+  return (await config()) !== null;
 }
 
 /**
@@ -77,11 +80,11 @@ export function newJazzCashTxnRef() {
   return `T${pktCompact(new Date())}${String(randomInt(0, 100000)).padStart(5, "0")}`;
 }
 
-export function jazzCashCheckout(
+export async function jazzCashCheckout(
   order: GatewayOrder,
   opts: { kind: "wallet" | "card"; txnRef: string; returnUrl: string },
-): PaymentRedirect {
-  const c = config();
+): Promise<PaymentRedirect> {
+  const c = await config();
   if (!c) throw new Error("JazzCash is not configured");
   const now = new Date();
   const fields: Record<string, string> = {
@@ -107,8 +110,8 @@ export function jazzCashCheckout(
 }
 
 /** Checks the pp_SecureHash on a response posted back by JazzCash. */
-export function verifyJazzCashResponse(fields: Record<string, string>) {
-  const c = config();
+export async function verifyJazzCashResponse(fields: Record<string, string>) {
+  const c = await config();
   if (!c || !fields.pp_SecureHash) return false;
   const expected = Buffer.from(jazzCashSecureHash(fields, c.salt));
   const given = Buffer.from(fields.pp_SecureHash.toUpperCase());
@@ -124,7 +127,7 @@ export function jazzCashStatusFromCode(code: string | undefined, message?: strin
 
 /** Asks JazzCash for the current status of a transaction (Payment Inquiry API). */
 export async function jazzCashInquire(txnRef: string): Promise<GatewayStatus> {
-  const c = config();
+  const c = await config();
   if (!c?.inquiryUrl) return { state: "pending", detail: "jazzcash inquiry not configured" };
   const body: Record<string, string> = {
     pp_TxnRefNo: txnRef,

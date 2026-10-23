@@ -3,15 +3,16 @@ import { MARKETS, toLocalMobile, type MarketCode, type MarketPaymentMethod } fro
 import { PAYMENT_WINDOW_MINUTES, type GatewayOrder, type GatewayStatus, type PaymentRedirect } from "@/lib/payments/common";
 import { easypaisaCheckout, easypaisaInquire, isEasypaisaConfigured } from "@/lib/payments/easypaisa";
 import { isJazzCashConfigured, jazzCashCheckout, jazzCashInquire, newJazzCashTxnRef } from "@/lib/payments/jazzcash";
+import { integrationSettings } from "@/lib/integration-settings";
 
 export type PaymentProvider = "stripe" | "jazzcash" | "easypaisa";
 
-/** Pakistani cards go through JazzCash unless PK_CARD_GATEWAY=easypaisa. */
-function cardGateway(): "jazzcash" | "easypaisa" {
-  return process.env.PK_CARD_GATEWAY === "easypaisa" ? "easypaisa" : "jazzcash";
+/** Pakistani cards go through JazzCash unless the card gateway is set to Easypaisa. */
+async function cardGateway(): Promise<"jazzcash" | "easypaisa"> {
+  return (await integrationSettings()).PK_CARD_GATEWAY === "easypaisa" ? "easypaisa" : "jazzcash";
 }
 
-export function providerFor(method: MarketPaymentMethod): PaymentProvider | null {
+export async function providerFor(method: MarketPaymentMethod): Promise<PaymentProvider | null> {
   switch (method) {
     case "STRIPE":
       return "stripe";
@@ -26,18 +27,22 @@ export function providerFor(method: MarketPaymentMethod): PaymentProvider | null
   }
 }
 
-function isConfigured(provider: PaymentProvider) {
+async function isConfigured(provider: PaymentProvider) {
   if (provider === "stripe") return getStripe() !== null;
   if (provider === "jazzcash") return isJazzCashConfigured();
   return isEasypaisaConfigured();
 }
 
-/** The market's methods whose gateway is configured on this server. */
-export function availablePaymentMethods(market: MarketCode): MarketPaymentMethod[] {
-  return MARKETS[market].paymentMethods.filter((m) => {
-    const provider = providerFor(m);
-    return provider === null || isConfigured(provider);
-  });
+/** The market's methods whose gateway is configured (Admin › Settings or .env). */
+export async function availablePaymentMethods(market: MarketCode): Promise<MarketPaymentMethod[]> {
+  const methods = MARKETS[market].paymentMethods;
+  const usable = await Promise.all(
+    methods.map(async (m) => {
+      const provider = await providerFor(m);
+      return provider === null || (await isConfigured(provider));
+    }),
+  );
+  return methods.filter((_, i) => usable[i]);
 }
 
 type StartInput = {
@@ -53,7 +58,7 @@ export async function startPayment(
   input: StartInput,
 ): Promise<{ provider: PaymentProvider; paymentRef: string; redirect: PaymentRedirect }> {
   const { order, market, method, appUrl } = input;
-  const provider = providerFor(method);
+  const provider = await providerFor(method);
   if (!provider) throw new Error(`${method} is not an online payment`);
   const kind = method === "CARD" ? "card" : "wallet";
 
@@ -84,7 +89,7 @@ export async function startPayment(
     return {
       provider,
       paymentRef: txnRef,
-      redirect: jazzCashCheckout(order, {
+      redirect: await jazzCashCheckout(order, {
         kind,
         txnRef,
         returnUrl: `${appUrl}/api/payments/jazzcash/return`,
@@ -96,7 +101,7 @@ export async function startPayment(
   return {
     provider,
     paymentRef: orderRefNum,
-    redirect: easypaisaCheckout(order, {
+    redirect: await easypaisaCheckout(order, {
       kind,
       orderRefNum,
       tokenPostBackUrl: `${appUrl}/api/payments/easypaisa/token?order=${encodeURIComponent(order.id)}`,

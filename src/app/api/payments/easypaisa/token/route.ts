@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/cart?payment=failed", app), 303);
   }
 
-  const { action, fields } = easypaisaConfirmForm(
+  const { action, fields } = await easypaisaConfirmForm(
     authToken,
     `${app}/api/payments/easypaisa/return?order=${encodeURIComponent(order.id)}`,
   );

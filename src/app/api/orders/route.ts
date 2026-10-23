@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     return badRequest(`Enter a ${m.name} mobile number, e.g. ${m.mobileExample}`);
   }
   const method = paymentMethod as MarketPaymentMethod;
-  if (!availablePaymentMethods(market).includes(method)) {
+  if (!(await availablePaymentMethods(market)).includes(method)) {
     return badRequest(`That payment method isn't available in ${m.name}`);
   }
   const isCod = method === "CASH_ON_DELIVERY";
