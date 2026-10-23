@@ -71,7 +71,8 @@ export function listingMetadata(
     description,
     alternates: { canonical: page > 1 && !filtered ? `${base}?page=${page}` : base },
     robots: filtered ? { index: false, follow: true } : undefined,
-    openGraph: { title, description, url: base },
+    // Setting openGraph replaces the layout's, so repeat the default share image.
+    openGraph: { title, description, url: base, images: [{ url: "/logo.png", width: 800, height: 514, alt: SITE_NAME }] },
   };
 }
 
