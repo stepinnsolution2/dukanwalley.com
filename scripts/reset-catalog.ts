@@ -33,6 +33,7 @@ async function main() {
   const media = [
     ...(await prisma.productImage.findMany({ select: { url: true } })),
     ...(await prisma.productVideo.findMany({ select: { url: true } })),
+    ...(await prisma.category.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } })).map((c) => ({ url: c.imageUrl! })),
   ].map((m) => m.url);
 
   await prisma.$transaction(async (tx) => {

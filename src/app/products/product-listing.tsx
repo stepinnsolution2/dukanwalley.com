@@ -62,6 +62,7 @@ export function listingMetadata(
     slug: string;
     parentName?: string | null;
     description?: string | null;
+    imageUrl?: string | null;
     /** No products listed yet: kept out of search results until it has some. */
     empty?: boolean;
   },
@@ -90,7 +91,16 @@ export function listingMetadata(
     alternates: { canonical: page > 1 && !filtered ? `${base}?page=${page}` : base },
     robots: filtered || category?.empty ? { index: false, follow: true } : undefined,
     // Setting openGraph replaces the layout's, so repeat the default share image.
-    openGraph: { title, description, url: base, images: [{ url: "/logo.png", width: 800, height: 514, alt: SITE_NAME }] },
+    openGraph: {
+      title,
+      description,
+      url: base,
+      images: [
+        category?.imageUrl
+          ? { url: category.imageUrl, width: 512, height: 512, alt: category.name }
+          : { url: "/logo.png", width: 800, height: 514, alt: SITE_NAME },
+      ],
+    },
   };
 }
 
@@ -124,7 +134,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
 
   // Category tree and the selected category (with everything under it).
   const categories = await prisma.category.findMany({
-    select: { id: true, name: true, slug: true, parentId: true, description: true },
+    select: { id: true, name: true, slug: true, parentId: true, description: true, imageUrl: true },
     orderBy: { name: "asc" },
   });
   const current = categorySlug ? categories.find((c) => c.slug === categorySlug) : undefined;
@@ -433,7 +443,14 @@ export async function ProductListing({ sp }: { sp: SP }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-semibold text-zinc-900">{current?.name ?? seller?.storeName ?? "All products"}</h1>
+                <h1 className="flex items-center gap-3 text-2xl font-semibold text-zinc-900">
+                  {current?.imageUrl ? (
+                    <span className="relative size-11 shrink-0 overflow-hidden rounded-2xl bg-zinc-100">
+                      <Image src={current.imageUrl} alt="" fill sizes="44px" className="object-contain p-1" />
+                    </span>
+                  ) : null}
+                  {current?.name ?? seller?.storeName ?? "All products"}
+                </h1>
                 <p className="text-sm text-zinc-500">
                   {total} product{total === 1 ? "" : "s"}
                 </p>

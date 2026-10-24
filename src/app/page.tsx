@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CategoryTiles } from "@/components/category-tiles";
 import { JsonLd } from "@/components/json-ld";
 import { ProductTile } from "@/components/product-tile";
 import { SellerAvatar } from "@/components/seller-avatar";
@@ -92,6 +93,8 @@ export default async function HomePage() {
             </Link>
           </div>
         </section>
+
+        <CategoryTiles />
 
         {hot.length ? (
           <section>

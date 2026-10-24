@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Category">
+  <!-- Shown on category tiles until an image is uploaded (Admin › Categories). -->
+  <ellipse cx="256" cy="430" rx="132" ry="18" fill="#12315b" opacity="0.08"/>
+  <path d="M190 178v-26a66 66 0 0 1 132 0v26" fill="none" stroke="#12315b" stroke-width="22" stroke-linecap="round"/>
+  <path d="M140 178h232l-14 214a26 26 0 0 1-26 24H180a26 26 0 0 1-26-24z" fill="#f7931e"/>
+  <path d="M140 178h232l-2 34H142z" fill="#e8750a"/>
+  <path d="M154 392a26 26 0 0 0 26 24h152a26 26 0 0 0 26-24l1-14H153z" fill="#e8750a" opacity="0.55"/>
+  <circle cx="204" cy="236" r="11" fill="#12315b"/>
+  <circle cx="308" cy="236" r="11" fill="#12315b"/>
+  <path d="M220 300c10 14 22 20 36 20s26-6 36-20" fill="none" stroke="#12315b" stroke-width="14" stroke-linecap="round"/>
+</svg>

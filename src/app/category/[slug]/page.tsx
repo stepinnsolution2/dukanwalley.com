@@ -40,7 +40,7 @@ const MOVED: Record<string, string> = {
 const getCategory = cache((slug: string) =>
   prisma.category.findUnique({
     where: { slug },
-    select: { id: true, name: true, slug: true, description: true, parent: { select: { name: true } } },
+    select: { id: true, name: true, slug: true, description: true, imageUrl: true, parent: { select: { name: true } } },
   }),
 );
 

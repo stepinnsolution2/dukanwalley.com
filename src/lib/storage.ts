@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from "fs";
-import { mkdir, open, rename, rm, stat } from "fs/promises";
+import { mkdir, open, rename, rm, stat, writeFile } from "fs/promises";
 import path from "path";
 import { randomBytes } from "crypto";
 import { Readable } from "stream";
@@ -44,9 +44,23 @@ export function mediaUrl(key: string) {
   return `/api/media/${key}`;
 }
 
-/** True for URLs we issued (media stored here), used to accept relative media paths in forms. */
 import { isStoredMediaUrl } from "./media-url";
+/** True for URLs we issued (media stored here), used to accept relative media paths in forms. */
 export { isStoredMediaUrl };
+
+/**
+ * Saves an image we produced ourselves (already validated and re-encoded), named after what it
+ * shows so the URL is descriptive: /api/media/image/202610/womens-fashion-3fa2c1.webp.
+ */
+export async function saveProcessedImage(data: Buffer, baseName: string, ext: "webp") {
+  const root = uploadRoot();
+  const month = new Date().toISOString().slice(0, 7).replace("-", "");
+  await mkdir(path.join(root, "image", month), { recursive: true });
+  const name = `${baseName.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "image"}-${randomBytes(3).toString("hex")}`;
+  const key = `image/${month}/${name}.${ext}`;
+  await writeFile(path.join(root, key), data);
+  return mediaUrl(key);
+}
 
 /**
  * Streams an upload to disk without buffering it in memory, enforcing the size limit and
@@ -91,7 +105,6 @@ export async function saveUpload(body: ReadableStream<Uint8Array>, kind: MediaKi
   }
 }
 
-/** Resolves a media key to a file inside the upload root (rejecting path traversal). */
 /** Deletes a file we stored (an /api/media/... URL). Other URLs and missing files are ignored. */
 export async function deleteStoredMedia(url: string) {
   if (!isStoredMediaUrl(url)) return false;
@@ -102,6 +115,7 @@ export async function deleteStoredMedia(url: string) {
   return true;
 }
 
+/** Resolves a media key to a file inside the upload root (rejecting path traversal). */
 export async function openMedia(key: string) {
   if (!/^(image|video)\/\d{6}\/[A-Za-z0-9_-]+\.[a-z0-9]+$/.test(key)) return null;
   const root = uploadRoot();

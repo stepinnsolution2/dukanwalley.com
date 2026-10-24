@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/authz";
+import { deleteStoredMedia } from "@/lib/storage";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,6 +11,9 @@ const patchSchema = z.object({
   parentId: z.string().nullable().optional(),
   // Shown on the category page and used as its search description; empty clears it.
   description: z.string().trim().max(2000).nullable().optional(),
+  // Home page "Shop by category" row.
+  showOnHome: z.boolean().optional(),
+  homeOrder: z.number().int().min(0).max(100_000).optional(),
 });
 
 /** Rename, move or describe a category. The slug stays fixed so storefront links don't break. */
@@ -19,7 +23,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const { name, parentId, description } = parsed.data;
+  const { name, parentId, description, showOnHome, homeOrder } = parsed.data;
 
   if (!(await prisma.category.findUnique({ where: { id } }))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -45,6 +49,8 @@ export async function PATCH(req: Request, { params }: Params) {
       ...(name !== undefined ? { name } : {}),
       ...(parentId !== undefined ? { parentId } : {}),
       ...(description !== undefined ? { description: description || null } : {}),
+      ...(showOnHome !== undefined ? { showOnHome } : {}),
+      ...(homeOrder !== undefined ? { homeOrder } : {}),
     },
   });
   await prisma.auditLog.create({
@@ -71,6 +77,7 @@ export async function DELETE(_req: Request, { params }: Params) {
     );
   }
   await prisma.category.delete({ where: { id } });
+  if (category.imageUrl) await deleteStoredMedia(category.imageUrl);
   await prisma.auditLog.create({
     data: { userId: authz.session.user.id, action: "CATEGORY_DELETE", entity: "Category", entityId: id, meta: { name: category.name } },
   });

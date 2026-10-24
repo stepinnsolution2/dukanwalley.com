@@ -177,6 +177,11 @@ model Category {
   slug        String    @unique
   /// Shown on the category page and used as its search description.
   description String?
+  /// Tile image (512×512 WebP made from the admin's upload); a placeholder is shown when empty.
+  imageUrl    String?
+  /// Listed in the home page "Shop by category" row, lowest homeOrder first.
+  showOnHome  Boolean   @default(false)
+  homeOrder   Int       @default(0)
   parentId    String?
   parent      Category? @relation("CatTree", fields: [parentId], references: [id])
   children    Category[] @relation("CatTree")

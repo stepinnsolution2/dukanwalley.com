@@ -348,9 +348,18 @@ export function categoryTreeSlugs() {
   return CATEGORIES.flatMap((c) => [c.slug, ...c.children.map((s) => s.slug ?? `${c.slug}-${slugify(s.name)}`)]);
 }
 
-async function upsertCategory(prisma: PrismaClient, data: { name: string; slug: string; description: string; parentId?: string }) {
+async function upsertCategory(
+  prisma: PrismaClient,
+  data: { name: string; slug: string; description: string; parentId?: string; homeOrder?: number },
+) {
   const existing = await prisma.category.findUnique({ where: { slug: data.slug } });
-  if (!existing) return prisma.category.create({ data: { ...data, parentId: data.parentId ?? null } });
+  if (!existing) {
+    // Main categories start out featured on the home page, in tree order.
+    const { homeOrder, ...rest } = data;
+    return prisma.category.create({
+      data: { ...rest, parentId: data.parentId ?? null, showOnHome: homeOrder !== undefined, homeOrder: homeOrder ?? 0 },
+    });
+  }
   // Keep admin edits; only fill a description that was never written.
   if (!existing.description) {
     return prisma.category.update({ where: { id: existing.id }, data: { description: data.description } });
@@ -369,8 +378,8 @@ async function ensureAttributes(prisma: PrismaClient, categoryId: string, attrs:
 }
 
 export async function seedCategories(prisma: PrismaClient) {
-  for (const c of CATEGORIES) {
-    const parent = await upsertCategory(prisma, { name: c.name, slug: c.slug, description: c.description });
+  for (const [i, c] of CATEGORIES.entries()) {
+    const parent = await upsertCategory(prisma, { name: c.name, slug: c.slug, description: c.description, homeOrder: (i + 1) * 10 });
     await ensureAttributes(prisma, parent.id, c.attributes);
     // Subcategories inherit the parent's fields; slugs are parent-prefixed (shoes-men).
     for (const s of c.children) {

@@ -10,6 +10,9 @@ type Category = {
   slug: string;
   parentId: string | null;
   description: string | null;
+  imageUrl: string | null;
+  showOnHome: boolean;
+  homeOrder: number;
   attributeDefs: Attr[];
   _count: { products: number; children: number };
 };
@@ -120,6 +123,122 @@ function AttributeEditor({ category, onSaved }: { category: Category; onSaved: (
   );
 }
 
+const PLACEHOLDER = "/category-placeholder.svg";
+
+/** Tile image (checked and optimised on upload) and the home page "Shop by category" settings. */
+function TilePanel({ category, onSaved }: { category: Category; onSaved: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string; notes?: string[] } | null>(null);
+  const [order, setOrder] = useState(String(category.homeOrder));
+
+  async function upload(file: File) {
+    setBusy(true);
+    setMsg(null);
+    const body = new FormData();
+    body.set("file", file);
+    const res = await fetch(`/api/admin/categories/${category.id}/image`, { method: "POST", body });
+    const j = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) return setMsg({ ok: false, text: j.error ?? "Upload failed" });
+    setMsg({
+      ok: true,
+      text: `Saved: optimised to ${j.side}×${j.side} WebP, ${Math.round(j.bytes / 1024)} KB (was ${Math.round(file.size / 1024)} KB).`,
+      notes: j.notes,
+    });
+    onSaved();
+  }
+
+  async function removeImage() {
+    if (!confirm("Remove this image? The placeholder will show instead.")) return;
+    const err = await send(`/api/admin/categories/${category.id}/image`, "DELETE");
+    setMsg(err ? { ok: false, text: err } : { ok: true, text: "Image removed" });
+    if (!err) onSaved();
+  }
+
+  async function saveHome(patch: { showOnHome?: boolean; homeOrder?: number }) {
+    const err = await send(`/api/admin/categories/${category.id}`, "PATCH", patch);
+    setMsg(err ? { ok: false, text: err } : { ok: true, text: "Saved" });
+    if (!err) onSaved();
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-5 rounded-lg bg-zinc-50 p-3">
+      <div className="flex flex-col items-center gap-1">
+        <span className="relative block size-28 overflow-hidden rounded-[28%] bg-rose-100 shadow-sm ring-4 ring-white">
+          {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of the exact stored file */}
+          <img
+            src={category.imageUrl ?? PLACEHOLDER}
+            alt={category.name}
+            className={`absolute inset-0 size-full ${category.imageUrl ? "object-cover" : "object-contain p-[14%] opacity-90"}`}
+          />
+        </span>
+        <span className="text-xs text-zinc-500">{category.imageUrl ? "Preview" : "Placeholder"}</span>
+      </div>
+
+      <div className="min-w-64 flex-1 space-y-3 text-sm">
+        <div>
+          <label className="font-medium">
+            {category.imageUrl ? "Replace image" : "Upload image"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              disabled={busy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void upload(f);
+              }}
+              className="mt-1 block text-sm"
+            />
+          </label>
+          <p className="mt-1 text-xs text-zinc-500">
+            Best: a square PNG with a transparent background, at least 512×512, one clear subject. JPG, PNG, WebP or
+            AVIF up to 8 MB. It is checked, cropped or centred, sharpened and saved as a light square WebP (up to 512×512).
+          </p>
+          {busy ? <p className="mt-1 text-zinc-600">Checking and optimising…</p> : null}
+          {category.imageUrl ? (
+            <button type="button" onClick={removeImage} className="mt-2 text-xs text-red-700 hover:underline">
+              Remove image
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 border-t border-zinc-200 pt-3">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={category.showOnHome} onChange={(e) => void saveHome({ showOnHome: e.target.checked })} />
+            Show on home page
+          </label>
+          <label className="flex items-center gap-2">
+            Order
+            <input
+              inputMode="numeric"
+              value={order}
+              onChange={(e) => setOrder(e.target.value)}
+              onBlur={() => {
+                const n = Number(order);
+                if (Number.isInteger(n) && n >= 0 && n !== category.homeOrder) void saveHome({ homeOrder: n });
+              }}
+              className="w-20 rounded border px-2 py-1"
+            />
+          </label>
+          <span className="text-xs text-zinc-500">Lower numbers show first.</span>
+        </div>
+
+        {msg ? (
+          <div className={msg.ok ? "text-teal-800" : "text-red-700"} role="status">
+            {msg.text}
+            {msg.notes?.map((n) => (
+              <p key={n} className="text-xs text-amber-800">
+                {n}
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /** Category page text, also used as its search description (the first ~155 characters). */
 function DescriptionEditor({ category, onSaved }: { category: Category; onSaved: () => void }) {
   const [text, setText] = useState(category.description ?? "");
@@ -154,6 +273,7 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   const [describing, setDescribing] = useState<string | null>(null);
+  const [tiling, setTiling] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newParent, setNewParent] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -224,8 +344,22 @@ export default function AdminCategoriesPage() {
         {sorted.map((c) => (
           <li key={c.id} className="rounded-xl border border-zinc-200 bg-white p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="font-medium">{path(c)}</p>
+              <div className="flex items-start gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element -- small admin thumbnail */}
+                <img
+                  src={c.imageUrl ?? PLACEHOLDER}
+                  alt=""
+                  className={`size-10 shrink-0 rounded-xl bg-zinc-100 object-contain p-1 ${c.imageUrl ? "" : "opacity-40"}`}
+                />
+                <div>
+                <p className="font-medium">
+                  {path(c)}
+                  {c.showOnHome ? (
+                    <span className="ml-2 rounded-full bg-teal-50 px-2 py-0.5 text-xs font-normal text-teal-800">
+                      Home page #{c.homeOrder}
+                    </span>
+                  ) : null}
+                </p>
                 <p className="text-xs text-zinc-500">
                   {c._count.products} products · {c.attributeDefs.length} fields
                   {c.attributeDefs.length ? `: ${c.attributeDefs.map((a) => a.name + (a.required ? "*" : "")).join(", ")}` : ""}
@@ -235,6 +369,7 @@ export default function AdminCategoriesPage() {
                     Also uses from parent: {inherited(c).map((a) => a.name + (a.required ? "*" : "")).join(", ")}
                   </p>
                 ) : null}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 text-sm">
                 <button type="button" onClick={() => setOpen(open === c.id ? null : c.id)} className="rounded border px-2 py-1">
@@ -246,6 +381,13 @@ export default function AdminCategoriesPage() {
                   className="rounded border px-2 py-1"
                 >
                   {describing === c.id ? "Close" : c.description ? "Description" : "Add description"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTiling(tiling === c.id ? null : c.id)}
+                  className="rounded border px-2 py-1"
+                >
+                  {tiling === c.id ? "Close" : "Image & home page"}
                 </button>
                 <button
                   type="button"
@@ -285,6 +427,7 @@ export default function AdminCategoriesPage() {
             </div>
             {open === c.id ? <AttributeEditor key={c.attributeDefs.map((a) => a.key).join()} category={c} onSaved={reload} /> : null}
             {describing === c.id ? <DescriptionEditor category={c} onSaved={reload} /> : null}
+            {tiling === c.id ? <TilePanel key={`${c.imageUrl}-${c.homeOrder}`} category={c} onSaved={reload} /> : null}
           </li>
         ))}
       </ul>
