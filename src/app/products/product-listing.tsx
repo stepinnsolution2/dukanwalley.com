@@ -11,7 +11,7 @@ import { categoryAndDescendantIds, inheritedAttributeDefs, storefrontProductWher
 import { getCurrentMarket } from "@/lib/market-session";
 import { formatMoney, MARKETS } from "@/lib/markets";
 import { canOptimizeImage } from "@/lib/media-url";
-import { breadcrumbJsonLd, SITE_NAME, type Crumb } from "@/lib/seo";
+import { breadcrumbJsonLd, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
 import { isColorKey } from "@/lib/variants";
 import type { Prisma } from "@/generated/prisma/client";
 import { AutoSubmitForm } from "./auto-submit-form";
@@ -57,26 +57,38 @@ export function isFilteredListing(sp: SP, ownKeys: string[] = []) {
 
 export function listingMetadata(
   sp: SP,
-  category?: { name: string; slug: string; parentName?: string | null },
+  category?: {
+    name: string;
+    slug: string;
+    parentName?: string | null;
+    description?: string | null;
+    /** No products listed yet: kept out of search results until it has some. */
+    empty?: boolean;
+  },
 ): Metadata {
   const page = Math.max(1, Math.trunc(Number(one(sp.page))) || 1);
   const base = category ? `/category/${category.slug}` : "/products";
   const q = one(sp.q);
   const filtered = isFilteredListing(sp, ["category"]);
   const pageSuffix = page > 1 ? ` – Page ${page}` : "";
+  // "Unstitched Suits – Women's Fashion", but just "Women's Shoes" (the parent is already in the name).
+  const parentWord = category?.parentName?.split(/[\s&]+/)[0]?.toLowerCase();
+  const withParent = category?.parentName && parentWord && !category.name.toLowerCase().includes(parentWord);
   const title = q
     ? `Search results for “${q}”`
     : category
-      ? `${category.name}${category.parentName ? ` – ${category.parentName}` : ""}${pageSuffix}`
+      ? `${category.name}${withParent ? ` – ${category.parentName}` : ""}${pageSuffix}`
       : `All products${pageSuffix}`;
   const description = category
-    ? `Shop ${category.name.toLowerCase()} from multiple sellers on ${SITE_NAME}. Compare prices and order online.`
+    ? category.description
+      ? metaDescription(category.description)
+      : `Shop ${category.name.toLowerCase()} from multiple sellers on ${SITE_NAME}. Compare prices and order online.`
     : `Browse products from multiple sellers on ${SITE_NAME}. Compare prices and order online.`;
   return {
     title,
     description,
     alternates: { canonical: page > 1 && !filtered ? `${base}?page=${page}` : base },
-    robots: filtered ? { index: false, follow: true } : undefined,
+    robots: filtered || category?.empty ? { index: false, follow: true } : undefined,
     // Setting openGraph replaces the layout's, so repeat the default share image.
     openGraph: { title, description, url: base, images: [{ url: "/logo.png", width: 800, height: 514, alt: SITE_NAME }] },
   };
@@ -112,7 +124,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
 
   // Category tree and the selected category (with everything under it).
   const categories = await prisma.category.findMany({
-    select: { id: true, name: true, slug: true, parentId: true },
+    select: { id: true, name: true, slug: true, parentId: true, description: true },
     orderBy: { name: "asc" },
   });
   const current = categorySlug ? categories.find((c) => c.slug === categorySlug) : undefined;
@@ -198,9 +210,11 @@ export async function ProductListing({ sp }: { sp: SP }) {
   const direct = new Map(counts.map((c) => [c.categoryId, c._count._all]));
   const countFor = (id: string) =>
     categoryAndDescendantIds(id, categories).reduce((s, cid) => s + (direct.get(cid) ?? 0), 0);
-  const roots = categories.filter((c) => !c.parentId);
-  const childrenOf = (id: string) => categories.filter((c) => c.parentId === id);
   const openRootId = current ? (current.parentId ?? current.id) : undefined;
+  // Empty categories stay out of the menu (the one being viewed, and its parent, always show).
+  const shown = (id: string) => countFor(id) > 0 || id === current?.id || id === openRootId;
+  const roots = categories.filter((c) => !c.parentId && shown(c.id));
+  const childrenOf = (id: string) => categories.filter((c) => c.parentId === id && shown(c.id));
 
   const sizeValues = new Set<string>();
   const colorValues = new Set<string>();
@@ -423,6 +437,9 @@ export async function ProductListing({ sp }: { sp: SP }) {
                 <p className="text-sm text-zinc-500">
                   {total} product{total === 1 ? "" : "s"}
                 </p>
+                {current?.description && page === 1 ? (
+                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600">{current.description}</p>
+                ) : null}
               </div>
               <AutoSubmitForm action={formAction} className="flex items-center gap-2 text-sm">
                 {Object.entries(sp)

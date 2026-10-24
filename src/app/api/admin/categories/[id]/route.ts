@@ -8,16 +8,18 @@ type Params = { params: Promise<{ id: string }> };
 const patchSchema = z.object({
   name: z.string().trim().min(2).max(60).optional(),
   parentId: z.string().nullable().optional(),
+  // Shown on the category page and used as its search description; empty clears it.
+  description: z.string().trim().max(2000).nullable().optional(),
 });
 
-/** Rename or move a category. The slug stays fixed so storefront links don't break. */
+/** Rename, move or describe a category. The slug stays fixed so storefront links don't break. */
 export async function PATCH(req: Request, { params }: Params) {
   const authz = await requirePermission("catalog:manage");
   if (!authz.ok) return authz.response;
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const { name, parentId } = parsed.data;
+  const { name, parentId, description } = parsed.data;
 
   if (!(await prisma.category.findUnique({ where: { id } }))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -39,7 +41,11 @@ export async function PATCH(req: Request, { params }: Params) {
   }
   const category = await prisma.category.update({
     where: { id },
-    data: { ...(name !== undefined ? { name } : {}), ...(parentId !== undefined ? { parentId } : {}) },
+    data: {
+      ...(name !== undefined ? { name } : {}),
+      ...(parentId !== undefined ? { parentId } : {}),
+      ...(description !== undefined ? { description: description || null } : {}),
+    },
   });
   await prisma.auditLog.create({
     data: { userId: authz.session.user.id, action: "CATEGORY_UPDATE", entity: "Category", entityId: id, meta: parsed.data },

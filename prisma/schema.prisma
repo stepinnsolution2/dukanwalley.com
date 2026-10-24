@@ -175,6 +175,8 @@ model Category {
   id          String    @id @default(cuid())
   name        String
   slug        String    @unique
+  /// Shown on the category page and used as its search description.
+  description String?
   parentId    String?
   parent      Category? @relation("CatTree", fields: [parentId], references: [id])
   children    Category[] @relation("CatTree")

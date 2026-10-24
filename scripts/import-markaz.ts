@@ -17,7 +17,9 @@ function arg(name: string) {
 
 /** seedCategories never changes existing rows; add new list options it defines (e.g. sizes). */
 async function addMissingSizeOptions() {
-  const sizes = await prisma.categoryAttribute.findMany({ where: { key: "size", dataType: "select", category: { slug: "garments" } } });
+  const sizes = await prisma.categoryAttribute.findMany({
+    where: { key: "size", dataType: "select", category: { slug: { in: ["womens-fashion", "mens-fashion"] } } },
+  });
   for (const a of sizes) {
     const missing = ["Free Size", "Unstitched"].filter((o) => !a.options.includes(o));
     if (missing.length) await prisma.categoryAttribute.update({ where: { id: a.id }, data: { options: [...a.options, ...missing] } });

@@ -137,14 +137,14 @@ export function cleanDescription(html: string): { text: string; facts: Record<st
 
 // --- Categories ---------------------------------------------------------------------------
 
-/** Our category for a Markaz product: [parent slug, child name], and an optional garment type. */
-type Placement = { parent: string; child: string; garmentType?: string };
+/** Our category for a Markaz product, by slug (see prisma/seed-categories.ts). */
+type Placement = { slug: string };
 
 function genderOf(p: MarkazProduct): "Men" | "Women" | "Kids" | null {
   const text = `${p.tags.join(" ")} ${p.type} ${p.title}`.toLowerCase();
-  if (/\b(women|womens|women's|ladies|girls?|girl's|bridal)\b/.test(text)) return "Women";
-  if (/\b(men|mens|men's|gents|boys?)\b/.test(text)) return "Men";
-  if (/\b(kids?|baby|child|children)\b/.test(text)) return "Kids";
+  if (/(kids?|baby|child|children)/.test(text)) return "Kids";
+  if (/(women|womens|women's|ladies|girls?|girl's|bridal)/.test(text)) return "Women";
+  if (/(men|mens|men's|gents|boys?)/.test(text)) return "Men";
   return null;
 }
 
@@ -152,24 +152,35 @@ function genderOf(p: MarkazProduct): "Men" | "Women" | "Kids" | null {
 export function placeProduct(p: MarkazProduct): Placement | null {
   const type = p.type.toLowerCase();
   const tags = p.tags.join(" | ").toLowerCase();
-  const all = `${type} | ${tags}`;
+  const all = `${type} | ${tags} | ${p.title.toLowerCase()}`;
   const gender = genderOf(p);
 
   if (/heel|shoe|sandal|slipper|sneaker|khussa|chappal|boot/.test(all)) {
-    return { parent: "shoes", child: gender ?? "Women" };
+    return { slug: gender === "Men" ? "shoes-men" : gender === "Kids" ? "shoes-kids" : "shoes-women" };
   }
-  if (/earring/.test(all)) return { parent: "jewellery", child: "Earrings" };
-  if (/\brings?\b/.test(type)) return { parent: "jewellery", child: "Rings" };
-  if (/necklace|artificial set|jewel/.test(all)) return { parent: "jewellery", child: "Necklaces & Sets" };
-  if (/hand ?bag|clutch|purse|tote/.test(all)) return { parent: "bags", child: "Women's Handbags" };
-  if (/cosmetic|makeup|beauty|lipstick|foundation/.test(all)) return { parent: "beauty", child: "Makeup" };
-  if (/stitched|unstitched|sleep ?wear|night|undergarment|bra|saree|suit|kurt|shirt|trouser|dress|lawn/.test(all)) {
-    const garmentType = /night|sleep/.test(all)
-      ? "Nightwear"
-      : /\bmen's unstitched|shalwar|kameez|wash n wear/.test(all)
-        ? "Shalwar Kameez"
-        : undefined;
-    return { parent: "garments", child: gender ?? "Women", garmentType };
+  if (/earring|jhumka/.test(all)) return { slug: "jewellery-watches-earrings" };
+  if (/rings?/.test(type)) return { slug: "jewellery-watches-rings" };
+  if (/bangle|bracelet|kangan/.test(all)) return { slug: "jewellery-watches-bangles-bracelets" };
+  if (/necklace|artificial set|jewel/.test(all)) return { slug: "jewellery-watches-necklaces-sets" };
+  if (/hand ?bag|clutch|purse|tote/.test(all)) return { slug: "bags-accessories-handbags" };
+  if (/cosmetic|makeup|lipstick|foundation|beauty/.test(all)) return { slug: "beauty-personal-care-makeup" };
+  if (/stitched|unstitched|sleep ?wear|night|undergarment|bra|saree|suit|kurt|shirt|trouser|dress|lawn|abaya|hijab|dupatta|shawl/.test(all)) {
+    if (gender === "Kids") {
+      return /boys?/.test(all) ? { slug: "kids-baby-boys-clothing" } : { slug: "kids-baby-girls-clothing" };
+    }
+    if (gender === "Men") {
+      if (/unstitched|fabric/.test(all)) return { slug: "mens-fashion-unstitched-fabric" };
+      if (/kurta/.test(all)) return { slug: "mens-fashion-kurtas" };
+      if (/trouser|jeans|pant/.test(all)) return { slug: "mens-fashion-trousers-jeans" };
+      if (/t-?shirt|polo|shirt/.test(all) && !/kameez/.test(all)) return { slug: "mens-fashion-shirts-t-shirts" };
+      return { slug: "mens-fashion-shalwar-kameez" };
+    }
+    if (/night|sleep|lounge/.test(all)) return { slug: "womens-fashion-nightwear" };
+    if (/abaya|hijab|niqab/.test(all)) return { slug: "womens-fashion-abayas-hijabs" };
+    if (/dupatta|shawl|stole/.test(all)) return { slug: "womens-fashion-dupattas-shawls" };
+    if (/bridal|saree|formal|party|wedding/.test(all)) return { slug: "womens-fashion-formal-bridal" };
+    if (/unstitched/.test(all)) return { slug: "womens-fashion-unstitched" };
+    return { slug: "womens-fashion-ready-to-wear" };
   }
   return null;
 }
@@ -245,7 +256,7 @@ export async function importMarkazProducts(
   opts: { vendorId: string; stockPerItem: number; dryRun?: boolean; log?: (msg: string) => void },
 ): Promise<ImportResult[]> {
   const log = opts.log ?? (() => {});
-  const categories = await prisma.category.findMany({ include: { parent: { select: { slug: true } } } });
+  const categories = await prisma.category.findMany({ include: { parent: { select: { name: true } } } });
   const results: ImportResult[] = [];
 
   for (const p of products) {
@@ -255,9 +266,7 @@ export async function importMarkazProducts(
     };
 
     const place = placeProduct(p);
-    const category = place
-      ? categories.find((c) => c.parent?.slug === place.parent && c.name === place.child)
-      : undefined;
+    const category = place ? categories.find((c) => c.slug === place.slug) : undefined;
     if (!place || !category) {
       result("skipped", `no category for Markaz type "${p.type}" (tags: ${p.tags.join(", ")})`);
       continue;
@@ -322,8 +331,6 @@ export async function importMarkazProducts(
     const metadata: Record<string, unknown> = {};
     const fabric = facts.fabric ?? facts["shirt fabric"];
     if (fabric && defs.some((d) => d.key === "fabric")) metadata.fabric = fabric;
-    const typeDef = defs.find((d) => d.key === "type");
-    if (place.garmentType && typeDef?.options.includes(place.garmentType)) metadata.type = place.garmentType;
     const attrs = await validateAttributes(category.id, metadata);
     if (!attrs.ok) {
       result("skipped", attrs.error);
@@ -354,7 +361,7 @@ export async function importMarkazProducts(
     const sources = p.imageUrls.filter((u) => !isWatermarked(u));
     const watermarked = p.imageUrls.length - sources.length;
     const summary = [
-      `${category.parent ? `${titleCase(place.parent)} › ` : ""}${category.name}`,
+      `${category.parent ? `${category.parent.name} › ` : ""}${category.name}`,
       `Rs ${basePrice}`,
       variants.variants.length ? `${variants.variants.length} option(s)` : "no options",
       `${sources.length} image(s)${watermarked ? `, ${watermarked} watermarked skipped` : ""}`,

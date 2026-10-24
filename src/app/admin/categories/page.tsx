@@ -9,6 +9,7 @@ type Category = {
   name: string;
   slug: string;
   parentId: string | null;
+  description: string | null;
   attributeDefs: Attr[];
   _count: { products: number; children: number };
 };
@@ -119,9 +120,40 @@ function AttributeEditor({ category, onSaved }: { category: Category; onSaved: (
   );
 }
 
+/** Category page text, also used as its search description (the first ~155 characters). */
+function DescriptionEditor({ category, onSaved }: { category: Category; onSaved: () => void }) {
+  const [text, setText] = useState(category.description ?? "");
+  const [msg, setMsg] = useState<string | null>(null);
+  async function save() {
+    const err = await send(`/api/admin/categories/${category.id}`, "PATCH", { description: text });
+    setMsg(err ?? "Saved");
+    if (!err) onSaved();
+  }
+  return (
+    <div className="mt-3 space-y-2">
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={4}
+        maxLength={2000}
+        placeholder="What shoppers find in this category and what to check before buying"
+        className="w-full rounded border px-3 py-2 text-sm"
+      />
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <button type="button" onClick={save} className="rounded bg-teal-700 px-3 py-1 text-white">
+          Save description
+        </button>
+        <span className="text-xs text-zinc-500">{text.length} characters · the first ~155 appear in Google results</span>
+        {msg ? <span className="text-zinc-600">{msg}</span> : null}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [open, setOpen] = useState<string | null>(null);
+  const [describing, setDescribing] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newParent, setNewParent] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -210,6 +242,13 @@ export default function AdminCategoriesPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setDescribing(describing === c.id ? null : c.id)}
+                  className="rounded border px-2 py-1"
+                >
+                  {describing === c.id ? "Close" : c.description ? "Description" : "Add description"}
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     const name = prompt("Rename category", c.name);
                     if (name && name !== c.name) void run(send(`/api/admin/categories/${c.id}`, "PATCH", { name }));
@@ -245,6 +284,7 @@ export default function AdminCategoriesPage() {
               </div>
             </div>
             {open === c.id ? <AttributeEditor key={c.attributeDefs.map((a) => a.key).join()} category={c} onSaved={reload} /> : null}
+            {describing === c.id ? <DescriptionEditor category={c} onSaved={reload} /> : null}
           </li>
         ))}
       </ul>

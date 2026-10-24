@@ -161,7 +161,7 @@ async function main() {
     },
   });
 
-  // Category tree (Shoes › Men, Garments › Women…) and category fields.
+  // Category tree (Women's Fashion › Unstitched Suits, Shoes › Men's Shoes…), descriptions and fields.
   await seedCategories(prisma);
 
   const shoes = await prisma.category.findUniqueOrThrow({
@@ -212,7 +212,7 @@ async function main() {
       salesTaxBps: 1800,
       stock: 200,
       categoryId: (
-        await prisma.category.findUniqueOrThrow({ where: { slug: "garments" } })
+        await prisma.category.findUniqueOrThrow({ where: { slug: "mens-fashion-shirts-t-shirts" } })
       ).id,
       vendorId: vendor.id,
       salesPersonId: salesProfile.id,
@@ -268,8 +268,8 @@ async function main() {
   });
 
   const uaeProducts = [
-    { slug: "uae-wireless-earbuds", name: "Wireless Earbuds Pro", basePrice: 249.5, category: "mobile-accessories", stock: 60 },
-    { slug: "uae-laptop-sleeve", name: "Leather Laptop Sleeve 14\"", basePrice: 189, category: "laptop-accessories", stock: 25 },
+    { slug: "uae-wireless-earbuds", name: "Wireless Earbuds Pro", basePrice: 249.5, category: "mobile-accessories-earphones-headphones", stock: 60 },
+    { slug: "uae-laptop-sleeve", name: "Leather Laptop Sleeve 14\"", basePrice: 189, category: "computer-accessories-bags-sleeves", stock: 25 },
   ];
   for (const p of uaeProducts) {
     await prisma.product.upsert({

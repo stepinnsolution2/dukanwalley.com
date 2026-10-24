@@ -45,7 +45,8 @@ export function mediaUrl(key: string) {
 }
 
 /** True for URLs we issued (media stored here), used to accept relative media paths in forms. */
-export { isStoredMediaUrl } from "./media-url";
+import { isStoredMediaUrl } from "./media-url";
+export { isStoredMediaUrl };
 
 /**
  * Streams an upload to disk without buffering it in memory, enforcing the size limit and
@@ -91,6 +92,16 @@ export async function saveUpload(body: ReadableStream<Uint8Array>, kind: MediaKi
 }
 
 /** Resolves a media key to a file inside the upload root (rejecting path traversal). */
+/** Deletes a file we stored (an /api/media/... URL). Other URLs and missing files are ignored. */
+export async function deleteStoredMedia(url: string) {
+  if (!isStoredMediaUrl(url)) return false;
+  const root = uploadRoot();
+  const file = path.join(root, url.slice("/api/media/".length));
+  if (!file.startsWith(root + path.sep)) return false;
+  await rm(file, { force: true });
+  return true;
+}
+
 export async function openMedia(key: string) {
   if (!/^(image|video)\/\d{6}\/[A-Za-z0-9_-]+\.[a-z0-9]+$/.test(key)) return null;
   const root = uploadRoot();
