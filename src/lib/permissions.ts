@@ -27,6 +27,8 @@ const GRANTS = {
   "newsletter:manage": OPERATIONS,
   "sales-team:manage": OWNER,
   "settings:manage": OWNER, // payment gateway and email credentials
+  "banners:manage": OPERATIONS, // home page hero banners
+  "ads:manage": OWNER, // paid advertising: companies, bookings, prices, reports
 } as const satisfies Record<string, readonly string[]>;
 
 export type Permission = keyof typeof GRANTS;

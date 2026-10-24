@@ -1,5 +1,6 @@
 "use client";
 
+import { CartAdSlot } from "@/components/cart-ad-slot";
 import { useCart } from "@/components/cart-context";
 import { CartContents } from "@/components/cart-contents";
 import { CONTAINER } from "@/lib/page-layout";
@@ -48,6 +49,7 @@ export function CartPanel() {
             </button>
           </div>
           <CartContents cart={cart} error={error} onQuantity={setQuantity} showSuggestions={isOpen} />
+          <CartAdSlot open={isOpen} />
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdSlot } from "@/components/ad-slot";
 import { NewsletterSignup } from "@/components/newsletter-signup";
 import { prisma } from "@/lib/db";
 import { categoryAndDescendantIds, storefrontProductWhere } from "@/lib/catalog";
@@ -21,6 +22,7 @@ export async function SiteFooter() {
   const categories = await shopCategories();
   return (
     <footer className="mt-auto border-t border-zinc-200 bg-white">
+      <AdSlot placement="footer" className="mx-auto max-w-[1600px] px-3 pt-6 sm:px-4" />
       <div className="mx-auto flex max-w-[1600px] flex-col gap-6 px-3 py-8 sm:px-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="font-semibold text-zinc-900">Stay in the loop</p>

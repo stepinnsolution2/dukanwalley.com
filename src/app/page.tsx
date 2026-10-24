@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AdSlot } from "@/components/ad-slot";
 import { CategoryTiles } from "@/components/category-tiles";
+import { HomeHero } from "@/components/home-hero";
 import { JsonLd } from "@/components/json-ld";
 import { ProductTile } from "@/components/product-tile";
 import { SellerAvatar } from "@/components/seller-avatar";
@@ -74,25 +76,7 @@ export default async function HomePage() {
       <JsonLd data={siteJsonLd} />
       <SiteHeader />
       <main className={`${PAGE_WIDE} flex flex-col gap-5`}>
-        <section className="rounded-xl bg-gradient-to-br from-teal-900 via-teal-800 to-zinc-900 px-5 py-8 text-white shadow sm:px-8">
-          <h1 className="text-balance text-2xl font-semibold leading-tight sm:text-3xl">
-            Discover products from verified vendors
-          </h1>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/products"
-              className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-teal-900 hover:bg-teal-50"
-            >
-              Browse catalog
-            </Link>
-            <Link
-              href="/sellers"
-              className="rounded-full border border-white/40 px-5 py-2 text-sm font-semibold text-white hover:bg-white/10"
-            >
-              See all sellers
-            </Link>
-          </div>
-        </section>
+        <HomeHero />
 
         <CategoryTiles />
 
@@ -136,6 +120,7 @@ export default async function HomePage() {
             </p>
           ) : null}
         </section>
+        <AdSlot placement="home_bottom" />
       </main>
       <SiteFooter />
     </>

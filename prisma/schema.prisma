@@ -679,3 +679,67 @@ model ImportJob {
 
   @@index([createdAt])
 }
+
+/// The store's own rotating images behind the home page hero (Admin › Banners).
+model HeroBanner {
+  id        String    @id @default(cuid())
+  imageUrl  String
+  alt       String
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  /// Optional display window; empty means always.
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+/// A company that buys advertising time (Admin › Advertising).
+model Advertiser {
+  id          String     @id @default(cuid())
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  banners     AdBanner[]
+}
+
+/// One paid banner booking: an image shown in one section between two dates.
+model AdBanner {
+  id            String     @id @default(cuid())
+  advertiserId  String
+  /// home_top | home_bottom | footer | cart | checkout
+  placement     String
+  imageUrl      String
+  alt           String
+  /// Where a click goes: the advertiser's site or a page here.
+  linkUrl       String?
+  startsAt      DateTime
+  endsAt        DateTime
+  /// Paused bookings don't show, even inside their dates.
+  isActive      Boolean    @default(true)
+  /// Whole PKR, for the owner's records (no online payment).
+  price         Int?
+  /// unpaid | partial | paid
+  paymentStatus String     @default("unpaid")
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  advertiser    Advertiser @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
+  stats         AdStat[]
+
+  @@index([placement, startsAt, endsAt])
+}
+
+/// Views and clicks of a booking per day (Pakistan time), for advertiser reports.
+model AdStat {
+  id          String   @id @default(cuid())
+  adBannerId  String
+  day         DateTime @db.Date
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  adBanner    AdBanner @relation(fields: [adBannerId], references: [id], onDelete: Cascade)
+
+  @@unique([adBannerId, day])
+}
