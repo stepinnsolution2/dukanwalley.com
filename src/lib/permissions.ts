@@ -17,6 +17,7 @@ const GRANTS = {
   "products:view": ALL_STAFF,
   "products:review": OPERATIONS,
   "products:edit": OPERATIONS,
+  "products:import": OPERATIONS, // supplier file imports (land in Pending review)
   "catalog:manage": OPERATIONS, // categories and their product attributes
   "vendors:view": OPERATIONS,
   "vendors:manage": OPERATIONS, // create vendors, KYC status, verification notes

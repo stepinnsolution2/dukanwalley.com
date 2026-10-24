@@ -108,7 +108,14 @@ function ProductsList() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Products</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Products</h1>
+        {can(session?.user?.role, "products:import") ? (
+          <Link href="/admin/products/import" className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium hover:border-zinc-900">
+            Import from Markaz
+          </Link>
+        ) : null}
+      </div>
       {filters.vendorId ? (
         <p className="mt-1 text-sm text-zinc-600">
           Filtered to one vendor ·{" "}

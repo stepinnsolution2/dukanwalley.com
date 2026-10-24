@@ -644,3 +644,33 @@ model Refund {
 
   order Order @relation(fields: [orderId], references: [id])
 }
+
+/// A supplier file uploaded in Admin › Products › Import: previewed first, then imported in the background.
+model ImportJob {
+  id           String    @id @default(cuid())
+  source       String
+  fileName     String
+  /// preview | running | done | failed
+  status       String    @default("preview")
+  vendorId     String
+  stockPerItem Int
+  createdById  String?
+  /// Products parsed from the file, so the import doesn't need the upload again.
+  products     Json
+  /// Dry-run outcome per product, shown before importing.
+  preview      Json
+  /// Real outcome per product, filled while importing.
+  results      Json?
+  total        Int
+  processed    Int       @default(0)
+  created      Int       @default(0)
+  updated      Int       @default(0)
+  skipped      Int       @default(0)
+  error        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  startedAt    DateTime?
+  finishedAt   DateTime?
+
+  @@index([createdAt])
+}

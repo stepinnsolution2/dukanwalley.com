@@ -4,6 +4,7 @@ import { inheritedAttributeDefs, syncProductVariants, validateAttributes, valida
 import { isValidPrice } from "@/lib/markets";
 import { slugify } from "@/lib/slug";
 import { saveUpload } from "@/lib/storage";
+import { uniqueVendorSlug } from "@/lib/vendor-slug";
 import { KycStatus, ProductApprovalStatus, UserRole, VendorRestriction } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -142,9 +143,9 @@ type Placement = { slug: string };
 
 function genderOf(p: MarkazProduct): "Men" | "Women" | "Kids" | null {
   const text = `${p.tags.join(" ")} ${p.type} ${p.title}`.toLowerCase();
-  if (/(kids?|baby|child|children)/.test(text)) return "Kids";
-  if (/(women|womens|women's|ladies|girls?|girl's|bridal)/.test(text)) return "Women";
-  if (/(men|mens|men's|gents|boys?)/.test(text)) return "Men";
+  if (/\b(kids?|baby|child|children)\b/.test(text)) return "Kids";
+  if (/\b(women|womens|women's|ladies|girls?|girl's|bridal)\b/.test(text)) return "Women";
+  if (/\b(men|mens|men's|gents|boys?)\b/.test(text)) return "Men";
   return null;
 }
 
@@ -159,20 +160,20 @@ export function placeProduct(p: MarkazProduct): Placement | null {
     return { slug: gender === "Men" ? "shoes-men" : gender === "Kids" ? "shoes-kids" : "shoes-women" };
   }
   if (/earring|jhumka/.test(all)) return { slug: "jewellery-watches-earrings" };
-  if (/rings?/.test(type)) return { slug: "jewellery-watches-rings" };
+  if (/\brings?\b/.test(type)) return { slug: "jewellery-watches-rings" };
   if (/bangle|bracelet|kangan/.test(all)) return { slug: "jewellery-watches-bangles-bracelets" };
   if (/necklace|artificial set|jewel/.test(all)) return { slug: "jewellery-watches-necklaces-sets" };
   if (/hand ?bag|clutch|purse|tote/.test(all)) return { slug: "bags-accessories-handbags" };
   if (/cosmetic|makeup|lipstick|foundation|beauty/.test(all)) return { slug: "beauty-personal-care-makeup" };
   if (/stitched|unstitched|sleep ?wear|night|undergarment|bra|saree|suit|kurt|shirt|trouser|dress|lawn|abaya|hijab|dupatta|shawl/.test(all)) {
     if (gender === "Kids") {
-      return /boys?/.test(all) ? { slug: "kids-baby-boys-clothing" } : { slug: "kids-baby-girls-clothing" };
+      return /\bboys?\b/.test(all) ? { slug: "kids-baby-boys-clothing" } : { slug: "kids-baby-girls-clothing" };
     }
     if (gender === "Men") {
       if (/unstitched|fabric/.test(all)) return { slug: "mens-fashion-unstitched-fabric" };
       if (/kurta/.test(all)) return { slug: "mens-fashion-kurtas" };
       if (/trouser|jeans|pant/.test(all)) return { slug: "mens-fashion-trousers-jeans" };
-      if (/t-?shirt|polo|shirt/.test(all) && !/kameez/.test(all)) return { slug: "mens-fashion-shirts-t-shirts" };
+      if (/t-?shirt|polo|\bshirt/.test(all) && !/kameez/.test(all)) return { slug: "mens-fashion-shirts-t-shirts" };
       return { slug: "mens-fashion-shalwar-kameez" };
     }
     if (/night|sleep|lounge/.test(all)) return { slug: "womens-fashion-nightwear" };
@@ -201,6 +202,7 @@ export async function ensureHouseStore(storeName: string) {
       vendorProfile: {
         create: {
           storeName,
+          slug: await uniqueVendorSlug(storeName),
           phone: "-",
           addressLine1: "Head office",
           market: MARKET,
@@ -253,7 +255,14 @@ async function downloadImage(url: string, attempts = 3): Promise<string> {
  */
 export async function importMarkazProducts(
   products: MarkazProduct[],
-  opts: { vendorId: string; stockPerItem: number; dryRun?: boolean; log?: (msg: string) => void },
+  opts: {
+    vendorId: string;
+    stockPerItem: number;
+    dryRun?: boolean;
+    log?: (msg: string) => void;
+    /** Called after each product is created, updated or skipped (for progress). */
+    onResult?: (r: ImportResult) => void;
+  },
 ): Promise<ImportResult[]> {
   const log = opts.log ?? (() => {});
   const categories = await prisma.category.findMany({ include: { parent: { select: { name: true } } } });
@@ -261,7 +270,9 @@ export async function importMarkazProducts(
 
   for (const p of products) {
     const result = (action: ImportResult["action"], detail: string, productId?: string) => {
-      results.push({ ref: p.ref, title: p.title, action, detail, productId });
+      const r = { ref: p.ref, title: p.title, action, detail, productId };
+      results.push(r);
+      opts.onResult?.(r);
       log(`${action.padEnd(7)} ${p.title} — ${detail}`);
     };
 
