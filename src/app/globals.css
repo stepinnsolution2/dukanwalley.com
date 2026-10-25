@@ -24,3 +24,103 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* --- Interaction basics (site-wide) -------------------------------------------------------
+   Tailwind's reset gives buttons an arrow cursor, borders the text colour and leaves the file
+   picker unstyled. Restore the expected affordances everywhere, including future pages.
+   Everything here is in the base layer, so utility classes on an element still win. */
+@layer base {
+  *,
+  ::before,
+  ::after,
+  ::file-selector-button {
+    border-color: var(--color-zinc-200, currentColor);
+  }
+
+  button,
+  [role="button"],
+  select,
+  summary,
+  label:has(> input[type="file"]),
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  input[type="date"],
+  input[type="submit"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-teal-700);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-teal-600);
+    outline-offset: 2px;
+  }
+
+  /* "Choose file": a real-looking button instead of the browser's plain text. */
+  input[type="file"] {
+    font-size: 0.875rem;
+    color: var(--color-zinc-600);
+  }
+  input[type="file"]::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--color-zinc-300);
+    border-radius: 0.5rem;
+    background: #fff;
+    color: var(--color-zinc-800);
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  input[type="file"]:hover::file-selector-button {
+    background: var(--color-teal-50);
+    border-color: var(--color-teal-600);
+    color: var(--color-teal-900);
+  }
+  input[type="file"]:disabled::file-selector-button {
+    cursor: not-allowed;
+  }
+
+  /* --- Admin panel defaults (wrapper: .admin-ui) ---
+     :where() keeps these at zero specificity, so a page's own classes always override them. */
+  .admin-ui :where(button[class~="border"], button[class~="rounded"]:not([class*="bg-"]):not([class*="text-"])) {
+    background-color: #fff;
+    border-color: var(--color-zinc-300);
+    color: var(--color-zinc-800);
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .admin-ui :where(button[class~="border"]:not(:disabled):hover) {
+    background-color: var(--color-zinc-50);
+    border-color: var(--color-zinc-400);
+  }
+  .admin-ui :where(button[aria-expanded="true"][class~="border"]) {
+    background-color: var(--color-teal-50);
+    border-color: var(--color-teal-600);
+    color: var(--color-teal-900);
+  }
+  .admin-ui :where(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea) {
+    border-color: var(--color-zinc-300);
+    background-color: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .admin-ui :where(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea):focus {
+    border-color: var(--color-teal-600);
+    box-shadow: 0 0 0 3px rgb(13 148 136 / 0.15);
+    outline: none;
+  }
+}

@@ -372,22 +372,24 @@ export default function AdminCategoriesPage() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 text-sm">
-                <button type="button" onClick={() => setOpen(open === c.id ? null : c.id)} className="rounded border px-2 py-1">
-                  {open === c.id ? "Close" : "Fields"}
+                <button type="button" aria-expanded={open === c.id} onClick={() => setOpen(open === c.id ? null : c.id)} className="rounded-lg border px-3 py-1">
+                  Fields {open === c.id ? "▴" : "▾"}
                 </button>
                 <button
                   type="button"
+                  aria-expanded={describing === c.id}
                   onClick={() => setDescribing(describing === c.id ? null : c.id)}
-                  className="rounded border px-2 py-1"
+                  className="rounded-lg border px-3 py-1"
                 >
-                  {describing === c.id ? "Close" : c.description ? "Description" : "Add description"}
+                  {c.description ? "Description" : "Add description"} {describing === c.id ? "▴" : "▾"}
                 </button>
                 <button
                   type="button"
+                  aria-expanded={tiling === c.id}
                   onClick={() => setTiling(tiling === c.id ? null : c.id)}
-                  className="rounded border px-2 py-1"
+                  className="rounded-lg border px-3 py-1"
                 >
-                  {tiling === c.id ? "Close" : "Image & home page"}
+                  Image &amp; home page {tiling === c.id ? "▴" : "▾"}
                 </button>
                 <button
                   type="button"
@@ -395,7 +397,7 @@ export default function AdminCategoriesPage() {
                     const name = prompt("Rename category", c.name);
                     if (name && name !== c.name) void run(send(`/api/admin/categories/${c.id}`, "PATCH", { name }));
                   }}
-                  className="rounded border px-2 py-1"
+                  className="rounded-lg border px-3 py-1"
                 >
                   Rename
                 </button>
@@ -403,7 +405,7 @@ export default function AdminCategoriesPage() {
                   aria-label="Move under"
                   value={c.parentId ?? ""}
                   onChange={(e) => void run(send(`/api/admin/categories/${c.id}`, "PATCH", { parentId: e.target.value || null }))}
-                  className="rounded border px-1 py-1"
+                  className="rounded-lg border px-2 py-1"
                 >
                   <option value="">Top level</option>
                   {sorted
@@ -419,7 +421,7 @@ export default function AdminCategoriesPage() {
                   disabled={c._count.products > 0 || c._count.children > 0}
                   title={c._count.products || c._count.children ? "Only empty categories can be deleted" : undefined}
                   onClick={() => confirm(`Delete ${c.name}?`) && void run(send(`/api/admin/categories/${c.id}`, "DELETE"))}
-                  className="rounded border border-red-200 px-2 py-1 text-red-700 disabled:opacity-40"
+                  className="rounded-lg border border-red-200 px-3 py-1 text-red-700 hover:bg-red-50"
                 >
                   Delete
                 </button>
