@@ -97,7 +97,7 @@ export default function AdminProductPage() {
   }
 
   /** Home page rows: Trending (isHot) and Most Popular. */
-  async function toggleHome(flags: { isHot?: boolean; isPopular?: boolean }) {
+  async function toggleHome(flags: { isHot?: boolean; isPopular?: boolean; featuredPriority?: number }) {
     setHotError(await save(flags));
   }
 
@@ -229,11 +229,23 @@ export default function AdminProductPage() {
                   Trending
                 </label>
                 <label className="flex items-center gap-2 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={product.featuredPriority > 0}
+                    // Featured = priority above 0; a higher priority set in the edit form is kept.
+                    onChange={(e) => toggleHome({ featuredPriority: e.target.checked ? Math.max(1, product.featuredPriority) : 0 })}
+                  />
+                  Featured
+                </label>
+                <label className="flex items-center gap-2 font-medium">
                   <input type="checkbox" checked={product.isPopular} onChange={(e) => toggleHome({ isPopular: e.target.checked })} />
                   Most popular
                 </label>
               </div>
-              <p className="text-zinc-600">Ticked products appear in the “Trending” and “Most Popular” rows on the home page.</p>
+              <p className="text-zinc-600">
+                Ticked products appear in the “Trending”, “Featured” and “Most Popular” rows on the home page. Higher featured
+                priority (edit form) shows first.
+              </p>
               {hotError ? <p className="text-red-600">{hotError}</p> : null}
             </div>
           ) : null}

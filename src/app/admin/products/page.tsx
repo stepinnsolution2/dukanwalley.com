@@ -17,6 +17,7 @@ type Product = {
   availableForSale: boolean;
   isHot: boolean;
   isPopular: boolean;
+  featuredPriority: number;
   stock: number;
   images: { url: string }[];
   category: { name: string };
@@ -40,7 +41,90 @@ const bulkActions = [
   { action: "unmark-hot", label: "Unmark trending" },
   { action: "mark-popular", label: "Mark most popular" },
   { action: "unmark-popular", label: "Unmark most popular" },
+  { action: "mark-featured", label: "Mark featured" },
+  { action: "unmark-featured", label: "Unmark featured" },
 ] as const;
+
+/** Home page rows as filters; counts come from the API. */
+const collections = [
+  { key: "", label: "All", count: "all" },
+  { key: "trending", label: "🔥 Trending", count: "trending" },
+  { key: "featured", label: "★ Featured", count: "featured" },
+  { key: "popular", label: "⭐ Most popular", count: "popular" },
+] as const;
+type Counts = { all: number; trending: number; featured: number; popular: number };
+
+/** Page numbers to show: first, last and a window around the current page ("…" for gaps). */
+function pageList(page: number, pages: number): (number | "…")[] {
+  const out: (number | "…")[] = [];
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - page) <= 2) out.push(p);
+    else if (out[out.length - 1] !== "…") out.push("…");
+  }
+  return out;
+}
+
+function Pager({
+  page,
+  pages,
+  total,
+  pageSize,
+  onPage,
+  onPageSize,
+}: {
+  page: number;
+  pages: number;
+  total: number;
+  pageSize: number;
+  onPage: (p: number) => void;
+  onPageSize: (n: number) => void;
+}) {
+  const from = total ? (page - 1) * pageSize + 1 : 0;
+  const to = Math.min(total, page * pageSize);
+  const btn = "rounded-lg border px-2.5 py-1 text-sm";
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+      <span className="text-zinc-600">
+        Showing <strong>{from}–{to}</strong> of <strong>{total}</strong> products
+      </span>
+      <div className="flex flex-wrap items-center gap-1">
+        <button type="button" disabled={page <= 1} onClick={() => onPage(page - 1)} className={btn}>
+          ‹ Previous
+        </button>
+        {pageList(page, pages).map((p, i) =>
+          p === "…" ? (
+            <span key={`gap-${i}`} className="px-1 text-zinc-400">
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              type="button"
+              aria-current={p === page ? "page" : undefined}
+              onClick={() => onPage(p)}
+              className={p === page ? "rounded-lg bg-teal-700 px-2.5 py-1 text-sm font-semibold text-white" : btn}
+            >
+              {p}
+            </button>
+          ),
+        )}
+        <button type="button" disabled={page >= pages} onClick={() => onPage(page + 1)} className={btn}>
+          Next ›
+        </button>
+        <label className="ml-2 flex items-center gap-1 text-zinc-600">
+          Per page
+          <select value={pageSize} onChange={(e) => onPageSize(Number(e.target.value))} className="rounded-lg border px-2 py-1">
+            {[25, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminProductsPage() {
   return (
@@ -61,9 +145,15 @@ function ProductsList() {
     visibility: "",
     q: "",
     vendorId,
+    collection: "",
+    pageSize: 50,
     page: 1,
   });
-  const [data, setData] = useState<{ products: Product[]; total: number; pageSize: number }>({ products: [], total: 0, pageSize: 50 });
+  const [data, setData] = useState<{ products: Product[]; total: number; pageSize: number; counts?: Counts }>({
+    products: [],
+    total: 0,
+    pageSize: 50,
+  });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [note, setNote] = useState<string | null>(null);
 
@@ -79,7 +169,7 @@ function ProductsList() {
     let ignore = false;
     void load().then((j) => {
       if (ignore) return;
-      setData({ products: j.products ?? [], total: j.total ?? 0, pageSize: j.pageSize ?? 50 });
+      setData({ products: j.products ?? [], total: j.total ?? 0, pageSize: j.pageSize ?? 50, counts: j.counts });
       setSelected(new Set());
     });
     return () => {
@@ -94,9 +184,9 @@ function ProductsList() {
       body: JSON.stringify({ ids: [...selected], action }),
     });
     const j = await res.json().catch(() => ({}));
-    setNote(res.ok ? `${j.updated} updated${j.skipped ? `, ${j.skipped} skipped (not approved / not displayed)` : ""}` : j.error ?? "Failed");
+    setNote(res.ok ? `${j.updated} updated${j.skipped ? `, ${j.skipped} unchanged (not approved, or already set)` : ""}` : j.error ?? "Failed");
     const fresh = await load();
-    setData({ products: fresh.products ?? [], total: fresh.total ?? 0, pageSize: fresh.pageSize ?? 50 });
+    setData({ products: fresh.products ?? [], total: fresh.total ?? 0, pageSize: fresh.pageSize ?? 50, counts: fresh.counts });
     setSelected(new Set());
   }
 
@@ -139,6 +229,23 @@ function ProductsList() {
           </button>
         ))}
       </div>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-sm">
+        <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Home page</span>
+        {collections.map((c) => {
+          const on = filters.collection === c.key;
+          return (
+            <button
+              key={c.key || "all"}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setFilters((f) => ({ ...f, collection: c.key, page: 1 }))}
+              className={`rounded-full border px-3 py-1 ${on ? "border-teal-700 bg-teal-700 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+            >
+              {c.label} <span className={on ? "text-teal-100" : "text-zinc-500"}>({data.counts?.[c.count] ?? "…"})</span>
+            </button>
+          );
+        })}
+      </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <input
           placeholder="Search name or SKU"
@@ -175,7 +282,20 @@ function ProductsList() {
       ) : null}
       {note ? <p className="mt-2 text-sm text-zinc-600">{note}</p> : null}
 
-      <ul className="mt-4 space-y-2">
+      {data.total > 0 ? (
+        <div className="mt-4">
+          <Pager
+            page={filters.page}
+            pages={pages}
+            total={data.total}
+            pageSize={data.pageSize}
+            onPage={(page) => setFilters((f) => ({ ...f, page }))}
+            onPageSize={(pageSize) => setFilters((f) => ({ ...f, pageSize, page: 1 }))}
+          />
+        </div>
+      ) : null}
+
+      <ul className="mt-3 space-y-2">
         {data.products.map((p) => (
           <li key={p.id} className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2">
             {canEdit ? <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} aria-label={`Select ${p.name}`} /> : null}
@@ -199,6 +319,9 @@ function ProductsList() {
                   : ""}
                 {p.isHot ? <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700">Trending</span> : null}
                 {p.isPopular ? <span className="ml-2 rounded bg-violet-100 px-1.5 py-0.5 font-medium text-violet-700">Most popular</span> : null}
+                {p.featuredPriority > 0 ? (
+                  <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 font-medium text-sky-800">Featured</span>
+                ) : null}
               </p>
             </div>
             <Link href={`/admin/products/${p.id}`} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
@@ -209,16 +332,18 @@ function ProductsList() {
       </ul>
       {data.products.length === 0 ? <p className="mt-6 text-zinc-500">No products match.</p> : null}
       {pages > 1 ? (
-        <div className="mt-4 flex items-center gap-2 text-sm">
-          <button type="button" disabled={filters.page <= 1} onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))} className="rounded border px-2 py-1 disabled:opacity-40">
-            Previous
-          </button>
-          <span>
-            Page {filters.page} of {pages} ({data.total} products)
-          </span>
-          <button type="button" disabled={filters.page >= pages} onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))} className="rounded border px-2 py-1 disabled:opacity-40">
-            Next
-          </button>
+        <div className="mt-4">
+          <Pager
+            page={filters.page}
+            pages={pages}
+            total={data.total}
+            pageSize={data.pageSize}
+            onPage={(page) => {
+              setFilters((f) => ({ ...f, page }));
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            onPageSize={(pageSize) => setFilters((f) => ({ ...f, pageSize, page: 1 }))}
+          />
         </div>
       ) : null}
     </div>

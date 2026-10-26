@@ -53,11 +53,11 @@ export default async function HomePage() {
   const live = storefrontProductWhere(market);
   const image = { images: { orderBy: { sortOrder: "asc" }, take: 1 } } as const;
   const rowOrder = [{ featuredPriority: "desc" }, { updatedAt: "desc" }] as const;
-  // Trending and Most Popular are picked by admins (Admin › Products); Featured is every live product
-  // by featured priority.
+  // Trending, Featured (featured priority > 0) and Most Popular are picked by admins (Admin › Products).
+  // Until something is featured, that row shows the newest products as "New arrivals".
   const [trending, featured, popular, topSellers] = await Promise.all([
     prisma.product.findMany({ where: { ...live, isHot: true }, include: image, orderBy: [...rowOrder], take: 16 }),
-    prisma.product.findMany({ where: live, include: image, orderBy: [...rowOrder], take: 24 }),
+    prisma.product.findMany({ where: { ...live, featuredPriority: { gt: 0 } }, include: image, orderBy: [...rowOrder], take: 24 }),
     prisma.product.findMany({ where: { ...live, isPopular: true }, include: image, orderBy: [...rowOrder], take: 16 }),
     prisma.vendorProfile.findMany({
       where: { ...sellableVendorWhere, market, isTopSeller: true, products: { some: live } },
@@ -66,6 +66,10 @@ export default async function HomePage() {
       take: 16,
     }),
   ]);
+  const newest = featured.length
+    ? []
+    : await prisma.product.findMany({ where: live, include: image, orderBy: { createdAt: "desc" }, take: 24 });
+  const middleRow = featured.length ? featured : newest;
 
   return (
     <>
@@ -79,10 +83,14 @@ export default async function HomePage() {
         <ProductRow title="🔥 Trending" href="/products?collection=trending" products={trending} market={market} />
 
         <section>
-          <SectionHeading title="Featured" href="/products" linkLabel="View all" />
           {featured.length ? (
+            <SectionHeading title="★ Featured" href="/products?collection=featured" linkLabel="View all" />
+          ) : (
+            <SectionHeading title="New arrivals" href="/products?sort=newest" linkLabel="View all" />
+          )}
+          {middleRow.length ? (
             <div className={grid}>
-              {featured.map((p) => (
+              {middleRow.map((p) => (
                 <ProductTile key={p.id} product={p} market={market} />
               ))}
             </div>

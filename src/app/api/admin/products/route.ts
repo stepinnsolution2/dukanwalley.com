@@ -6,11 +6,20 @@ import { isMarketCode } from "@/lib/markets";
 import { ProductApprovalStatus } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZES = [25, 50, 100];
+
+/** Home page rows, as product filters (Trending is the isHot flag). */
+const COLLECTIONS = {
+  trending: { isHot: true },
+  popular: { isPopular: true },
+  featured: { featuredPriority: { gt: 0 } },
+} satisfies Record<string, Prisma.ProductWhereInput>;
+type Collection = keyof typeof COLLECTIONS;
 
 /**
  * Catalog list for staff. Filters: status, market, vendorId, visibility (live|hidden), q
- * (name or SKU), page.
+ * (name or SKU), collection (trending|popular|featured); page and pageSize (25|50|100).
+ * Also returns how many products each collection has under the other filters.
  */
 export async function GET(req: Request) {
   const authz = await requirePermission("products:view");
@@ -24,8 +33,11 @@ export async function GET(req: Request) {
   const visibility = sp.get("visibility");
   const q = sp.get("q")?.trim();
   const page = Math.max(1, Number(sp.get("page")) || 1);
+  const pageSize = PAGE_SIZES.includes(Number(sp.get("pageSize"))) ? Number(sp.get("pageSize")) : 50;
+  const collection = sp.get("collection") as Collection | null;
+  if (collection && !(collection in COLLECTIONS)) return NextResponse.json({ error: "Unknown collection" }, { status: 400 });
 
-  const where: Prisma.ProductWhereInput = {
+  const base: Prisma.ProductWhereInput = {
     ...(status ? { approvalStatus: status as ProductApprovalStatus } : {}),
     ...(isMarketCode(market) ? { vendor: { market } } : {}),
     ...(sp.get("vendorId") ? { vendorId: sp.get("vendorId")! } : {}),
@@ -40,7 +52,13 @@ export async function GET(req: Request) {
         }
       : {}),
   };
-  const [products, total] = await Promise.all([
+  const where: Prisma.ProductWhereInput = collection ? { AND: [base, COLLECTIONS[collection]] } : base;
+  const counts = Object.fromEntries(
+    await Promise.all(
+      (Object.keys(COLLECTIONS) as Collection[]).map(async (c) => [c, await prisma.product.count({ where: { AND: [base, COLLECTIONS[c]] } })]),
+    ),
+  ) as Record<Collection, number>;
+  const [products, total, all] = await Promise.all([
     prisma.product.findMany({
       where,
       include: {
@@ -50,18 +68,22 @@ export async function GET(req: Request) {
         salesPerson: { include: { user: { select: { name: true, email: true } } } },
       },
       orderBy: { updatedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }),
     prisma.product.count({ where }),
+    prisma.product.count({ where: base }),
   ]);
-  return NextResponse.json({ products, total, page, pageSize: PAGE_SIZE });
+  return NextResponse.json({ products, total, page, pageSize, counts: { all, ...counts } });
 }
 
 const bulkSchema = z.object({
   ids: z.array(z.string()).min(1).max(200),
   // mark-hot / unmark-hot = Trending (the flag was called Hot before).
-  action: z.enum(["hide", "show", "stop-selling", "start-selling", "mark-hot", "unmark-hot", "mark-popular", "unmark-popular"]),
+  action: z.enum([
+    "hide", "show", "stop-selling", "start-selling",
+    "mark-hot", "unmark-hot", "mark-popular", "unmark-popular", "mark-featured", "unmark-featured",
+  ]),
 });
 
 /** Bulk moderation: hide/show listings, stop/start sales, or mark approved ones hot. */
@@ -87,6 +109,10 @@ export async function POST(req: Request) {
     "unmark-hot": () => prisma.product.updateMany({ where: { id: { in: ids } }, data: { isHot: false } }),
     "mark-popular": () => prisma.product.updateMany({ where: { id: { in: ids }, ...approved }, data: { isPopular: true } }),
     "unmark-popular": () => prisma.product.updateMany({ where: { id: { in: ids } }, data: { isPopular: false } }),
+    // Featured = featured priority above 0; marking keeps a higher priority someone already set.
+    "mark-featured": () =>
+      prisma.product.updateMany({ where: { id: { in: ids }, ...approved, featuredPriority: { lte: 0 } }, data: { featuredPriority: 1 } }),
+    "unmark-featured": () => prisma.product.updateMany({ where: { id: { in: ids } }, data: { featuredPriority: 0 } }),
   }[action]();
 
   await prisma.auditLog.create({

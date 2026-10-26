@@ -23,6 +23,7 @@ const PAGE_SIZE = 24;
 const COLLECTIONS: Record<string, { label: string; where: Prisma.ProductWhereInput }> = {
   trending: { label: "Trending", where: { isHot: true } },
   popular: { label: "Most Popular", where: { isPopular: true } },
+  featured: { label: "Featured", where: { featuredPriority: { gt: 0 } } },
 };
 
 const SORTS = {
