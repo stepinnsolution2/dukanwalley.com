@@ -33,13 +33,14 @@ export async function HomeHero() {
   return (
     <div className={`grid gap-3 ${ads.length ? "lg:grid-cols-[3fr_1fr]" : ""}`}>
       <section
-        // On laptops the ad keeps its exact shape and sets the row height; the hero fills beside it.
-        className={`relative isolate min-h-[300px] overflow-hidden rounded-2xl bg-gradient-to-br from-teal-900 via-teal-800 to-zinc-900 shadow sm:min-h-[340px] lg:min-h-0 ${
+        // Phones: the banner on top at its own shape, the headline and search on a solid block below.
+        // Larger screens: the text over the banner. On laptops the ad sets the row height.
+        className={`relative isolate flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-teal-900 via-teal-800 to-zinc-900 shadow sm:block sm:min-h-[340px] lg:min-h-0 ${
           ads.length ? "" : "lg:aspect-[45/14]"
         }`}
       >
         {banners.length ? (
-          <div className="absolute inset-0 -z-10">
+          <div className="relative aspect-[45/14] w-full sm:absolute sm:inset-0 sm:-z-10 sm:aspect-auto">
             <Rotator
               label="Featured"
               slides={banners.map((b, i) => (
@@ -57,18 +58,18 @@ export async function HomeHero() {
             />
           </div>
         ) : null}
-        {/* Keeps the headline readable on any photo. */}
-        <div className="pointer-events-none absolute inset-0 -z-0 bg-gradient-to-r from-black/70 via-black/40 to-black/5" />
+        {/* Keeps the headline readable over the banner (not needed on phones, where it sits below). */}
+        <div className="pointer-events-none absolute inset-0 z-0 hidden bg-gradient-to-r from-black/70 via-black/40 to-black/5 sm:block" />
 
         {/* Clicks pass through empty space to the slideshow controls underneath. */}
-        <div className="pointer-events-none relative z-10 flex h-full flex-col justify-center px-5 py-8 text-white sm:px-8 [&>*]:pointer-events-auto">
-          <h1 className="max-w-xl text-balance text-2xl font-semibold leading-tight drop-shadow sm:text-4xl">
+        <div className="pointer-events-none relative z-10 flex flex-col justify-center px-4 py-5 text-white sm:h-full sm:px-8 sm:py-8 [&>*]:pointer-events-auto">
+          <h1 className="max-w-xl text-balance text-[1.6rem] font-semibold leading-tight drop-shadow sm:text-4xl">
             Online Shopping {inMarket(market)}
           </h1>
-          <p className="mt-1.5 max-w-xl text-sm text-white/90 drop-shadow sm:text-base">
-            Products from verified sellers · {SITE_TAGLINE}
+          <p className="mt-1 max-w-xl text-sm text-white/90 drop-shadow sm:mt-1.5 sm:text-base">
+            Products from verified sellers<span className="hidden sm:inline"> · {SITE_TAGLINE}</span>
           </p>
-          <form action="/products" role="search" className="mt-5 flex w-full max-w-xl overflow-hidden rounded-full bg-white shadow-lg">
+          <form action="/products" role="search" className="mt-4 flex w-full max-w-xl overflow-hidden rounded-full bg-white shadow-lg sm:mt-5">
             <label htmlFor="hero-search" className="sr-only">
               Search products
             </label>
@@ -77,18 +78,18 @@ export async function HomeHero() {
               name="q"
               type="search"
               required
-              placeholder="Search for products, brands and more"
-              className="min-w-0 flex-1 bg-transparent px-5 py-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-500"
+              placeholder="Search products and brands"
+              className="min-w-0 flex-1 bg-transparent px-4 py-2.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-500 sm:px-5 sm:py-3"
             />
-            <button type="submit" className="m-1 rounded-full bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800">
+            <button type="submit" className="m-1 shrink-0 rounded-full bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800 sm:px-5">
               Search
             </button>
           </form>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/products" className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-teal-900 hover:bg-teal-50">
+          <div className="mt-3 flex flex-wrap gap-2 sm:mt-4 sm:gap-3">
+            <Link href="/products" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-teal-900 hover:bg-teal-50 sm:px-5">
               Browse catalog
             </Link>
-            <Link href="/sellers" className="rounded-full border border-white/50 px-5 py-2 text-sm font-semibold text-white hover:bg-white/10">
+            <Link href="/sellers" className="rounded-full border border-white/50 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 sm:px-5">
               See all sellers
             </Link>
           </div>

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AutoScroller } from "@/components/auto-scroller";
 import { prisma } from "@/lib/db";
 import { canOptimizeImage } from "@/lib/media-url";
 
@@ -43,12 +44,12 @@ export async function CategoryTiles() {
           See all →
         </Link>
       </div>
-      {/* Swipes sideways on phones; wraps into a grid on wider screens. */}
-      <ul className="-mx-3 mt-4 flex snap-x gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:gap-4 sm:overflow-visible sm:px-0">
+      {/* One line that slides slowly right to left (and can be swiped). */}
+      <AutoScroller label="Categories" className="-mx-3 mt-3 px-3 py-1.5 sm:mx-0 sm:px-0">
         {categories.map((c, i) => {
           const src = c.imageUrl ?? PLACEHOLDER;
           return (
-            <li key={c.id} className="w-24 shrink-0 snap-start sm:w-auto">
+            <div key={c.id} className="w-24 shrink-0 sm:w-28">
               <Link href={`/category/${c.slug}`} className="group flex flex-col items-center text-center">
                 <span
                   className={`relative block aspect-square w-full max-w-28 overflow-hidden rounded-[28%] ${TINTS[i % TINTS.length]} shadow-sm ring-4 ring-white transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md`}
@@ -67,10 +68,10 @@ export async function CategoryTiles() {
                   {c.name}
                 </span>
               </Link>
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </AutoScroller>
     </section>
   );
 }

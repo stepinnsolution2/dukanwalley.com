@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdSlot } from "@/components/ad-slot";
+import { AutoScroller } from "@/components/auto-scroller";
 import { CategoryTiles } from "@/components/category-tiles";
 import { HomeHero } from "@/components/home-hero";
 import { JsonLd } from "@/components/json-ld";
@@ -46,7 +47,6 @@ const siteJsonLd = [
   },
 ];
 
-const grid = "grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8";
 
 export default async function HomePage() {
   const market = await getCurrentMarket();
@@ -82,24 +82,15 @@ export default async function HomePage() {
 
         <ProductRow title="🔥 Trending" href="/products?collection=trending" products={trending} market={market} />
 
-        <section>
-          {featured.length ? (
-            <SectionHeading title="★ Featured" href="/products?collection=featured" linkLabel="View all" />
-          ) : (
-            <SectionHeading title="New arrivals" href="/products?sort=newest" linkLabel="View all" />
-          )}
-          {middleRow.length ? (
-            <div className={grid}>
-              {middleRow.map((p) => (
-                <ProductTile key={p.id} product={p} market={market} />
-              ))}
-            </div>
-          ) : (
-            <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600">
-              New products are on their way. Check back soon!
-            </p>
-          )}
-        </section>
+        {featured.length ? (
+          <ProductRow title="★ Featured" href="/products?collection=featured" products={featured} market={market} />
+        ) : middleRow.length ? (
+          <ProductRow title="New arrivals" href="/products?sort=newest" products={middleRow} market={market} />
+        ) : (
+          <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600">
+            New products are on their way. Check back soon!
+          </p>
+        )}
 
         <ProductRow title="⭐ Most Popular" href="/products?collection=popular" products={popular} market={market} />
 
@@ -126,7 +117,7 @@ export default async function HomePage() {
   );
 }
 
-/** An admin-picked row of products; hidden while nothing is picked. */
+/** A one-line row of products that slides slowly right to left; hidden while empty. */
 function ProductRow({
   title,
   href,
@@ -142,11 +133,13 @@ function ProductRow({
   return (
     <section>
       <SectionHeading title={title} href={href} linkLabel="View all" />
-      <div className={grid}>
+      <AutoScroller label={title.replace(/^W+/, "")} className="-mx-3 px-3 py-1 sm:mx-0 sm:px-0">
         {products.map((p) => (
-          <ProductTile key={p.slug} product={p} market={market} />
+          <div key={p.slug} className="w-36 shrink-0 sm:w-44">
+            <ProductTile product={p} market={market} />
+          </div>
         ))}
-      </div>
+      </AutoScroller>
     </section>
   );
 }
