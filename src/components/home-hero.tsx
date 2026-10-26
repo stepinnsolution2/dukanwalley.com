@@ -5,7 +5,9 @@ import { Rotator } from "@/components/rotator";
 import { prisma } from "@/lib/db";
 import { liveAds } from "@/lib/ads";
 import { AD_PLACEMENTS } from "@/lib/ad-placements";
+import { getCurrentMarket } from "@/lib/market-session";
 import { canOptimizeImage } from "@/lib/media-url";
+import { inMarket, SITE_TAGLINE } from "@/lib/seo";
 
 // Home page hero: the store's rotating banners (Admin › Banners) with the headline and a site
 // search on top; on laptops the "home page top" ad takes the last quarter (below it on phones).
@@ -25,7 +27,7 @@ async function liveHeroBanners() {
 }
 
 export async function HomeHero() {
-  const [banners, ads] = await Promise.all([liveHeroBanners(), liveAds("home_top")]);
+  const [banners, ads, market] = await Promise.all([liveHeroBanners(), liveAds("home_top"), getCurrentMarket()]);
   const ad = AD_PLACEMENTS.home_top;
 
   return (
@@ -60,9 +62,12 @@ export async function HomeHero() {
 
         {/* Clicks pass through empty space to the slideshow controls underneath. */}
         <div className="pointer-events-none relative z-10 flex h-full flex-col justify-center px-5 py-8 text-white sm:px-8 [&>*]:pointer-events-auto">
-          <h1 className="max-w-xl text-balance text-2xl font-semibold leading-tight drop-shadow sm:text-3xl">
-            Discover products from verified vendors
+          <h1 className="max-w-xl text-balance text-2xl font-semibold leading-tight drop-shadow sm:text-4xl">
+            Online Shopping {inMarket(market)}
           </h1>
+          <p className="mt-1.5 max-w-xl text-sm text-white/90 drop-shadow sm:text-base">
+            Products from verified sellers · {SITE_TAGLINE}
+          </p>
           <form action="/products" role="search" className="mt-5 flex w-full max-w-xl overflow-hidden rounded-full bg-white shadow-lg">
             <label htmlFor="hero-search" className="sr-only">
               Search products

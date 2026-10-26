@@ -39,3 +39,13 @@ export function breadcrumbJsonLd(crumbs: Crumb[]) {
     })),
   };
 }
+
+/** How shoppers name the market in searches: "Pakistan", "UAE". */
+export function marketPlace(market: "PK" | "AE") {
+  return market === "AE" ? "UAE" : "Pakistan";
+}
+
+/** "in Pakistan" / "in the UAE", for titles like "Online Shopping in Pakistan". */
+export function inMarket(market: "PK" | "AE") {
+  return market === "AE" ? "in the UAE" : "in Pakistan";
+}

@@ -11,7 +11,7 @@ import { prisma } from "@/lib/db";
 import { inheritedAttributeDefs, sellableVendorWhere, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
 import { formatMoney, MARKETS } from "@/lib/markets";
-import { absoluteUrl, breadcrumbJsonLd, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
+import { absoluteUrl, breadcrumbJsonLd, inMarket, marketPlace, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
 import { storeHref } from "@/lib/vendor-slug";
 import { AddToCart, type PickerAxis } from "./add-to-cart";
 import { ProductViewTracker } from "./product-detail-client";
@@ -57,18 +57,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!product) return { title: "Product not found", robots: { index: false } };
   const market = product.vendor.market;
   const { min } = priceRange(product);
+  // Shoppers search "<product> price in Pakistan", so the title and description lead with that.
+  const title = `${product.name} Price in ${marketPlace(market)}`;
   const description = metaDescription(
-    product.description?.trim() ||
-      `Buy ${product.name} for ${formatMoney(market, min)} from ${product.vendor.storeName} on ${SITE_NAME}.`,
+    `${product.name} price ${inMarket(market)}: ${formatMoney(market, min)} from ${product.vendor.storeName} on ${SITE_NAME}.` +
+      (product.description?.trim() ? ` ${product.description.trim()}` : ""),
   );
   const path = `/products/${product.slug}`;
   const images = product.images.slice(0, 4).map((i) => ({ url: absoluteUrl(i.url), alt: product.name }));
   return {
-    title: product.name,
+    title,
     description,
     alternates: { canonical: path },
-    openGraph: { type: "website", title: product.name, description, url: path, ...(images.length ? { images } : {}) },
-    twitter: { card: images.length ? "summary_large_image" : "summary", title: product.name, description },
+    openGraph: { type: "website", title, description, url: path, ...(images.length ? { images } : {}) },
+    twitter: { card: images.length ? "summary_large_image" : "summary", title, description },
   };
 }
 

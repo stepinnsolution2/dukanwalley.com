@@ -19,8 +19,9 @@ import { storeHref } from "@/lib/vendor-slug";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { absolute: `${SITE_NAME} – ${SITE_TAGLINE}` },
-  description: `Shop products from multiple verified sellers on ${SITE_NAME}. Browse categories, compare prices and order online in Pakistan and the UAE.`,
+  // The phrase Pakistani shoppers search for, then the brand.
+  title: { absolute: `Online Shopping in Pakistan – ${SITE_NAME}` },
+  description: `Online shopping in Pakistan with ${SITE_NAME}: ${SITE_TAGLINE.toLowerCase()}. Shop fashion, shoes, mobiles, electronics and more from verified sellers and compare prices.`,
   alternates: { canonical: "/" },
 };
 

@@ -60,7 +60,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
     ...category,
     parentName: category.parent?.name,
     empty: !(await hasProducts(category.id)),
-  });
+  }, await getCurrentMarket());
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {

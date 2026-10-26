@@ -9,9 +9,9 @@ import { SiteHeader } from "@/components/site-header";
 import { prisma } from "@/lib/db";
 import { categoryAndDescendantIds, inheritedAttributeDefs, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
-import { formatMoney, MARKETS } from "@/lib/markets";
+import { DEFAULT_MARKET, formatMoney, MARKETS, type MarketCode } from "@/lib/markets";
 import { canOptimizeImage } from "@/lib/media-url";
-import { breadcrumbJsonLd, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
+import { breadcrumbJsonLd, inMarket, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
 import { isColorKey } from "@/lib/variants";
 import type { Prisma } from "@/generated/prisma/client";
 import { AutoSubmitForm } from "./auto-submit-form";
@@ -72,25 +72,25 @@ export function listingMetadata(
     /** No products listed yet: kept out of search results until it has some. */
     empty?: boolean;
   },
+  market: MarketCode = DEFAULT_MARKET,
 ): Metadata {
   const page = Math.max(1, Math.trunc(Number(one(sp.page))) || 1);
   const base = category ? `/category/${category.slug}` : "/products";
   const q = one(sp.q);
   const filtered = isFilteredListing(sp, ["category"]);
   const pageSuffix = page > 1 ? ` – Page ${page}` : "";
-  // "Unstitched Suits – Women's Fashion", but just "Women's Shoes" (the parent is already in the name).
-  const parentWord = category?.parentName?.split(/[\s&]+/)[0]?.toLowerCase();
-  const withParent = category?.parentName && parentWord && !category.name.toLowerCase().includes(parentWord);
+  // Worded like the searches people type: "Buy Unstitched Suits Online in Pakistan".
+  const where = inMarket(market);
   const title = q
     ? `Search results for “${q}”`
     : category
-      ? `${category.name}${withParent ? ` – ${category.parentName}` : ""}${pageSuffix}`
-      : `${COLLECTIONS[one(sp.collection) ?? ""]?.label ?? "All products"}${pageSuffix}`;
+      ? `Buy ${category.name} Online ${where}${pageSuffix}`
+      : `${COLLECTIONS[one(sp.collection) ?? ""]?.label ?? "All Products"} – Online Shopping ${where}${pageSuffix}`;
   const description = category
     ? category.description
       ? metaDescription(category.description)
-      : `Shop ${category.name.toLowerCase()} from multiple sellers on ${SITE_NAME}. Compare prices and order online.`
-    : `Browse products from multiple sellers on ${SITE_NAME}. Compare prices and order online.`;
+      : `Shop ${category.name.toLowerCase()} online ${where} from multiple sellers on ${SITE_NAME}. Compare prices and order online.`
+    : `Online shopping ${where}: browse products from multiple sellers on ${SITE_NAME}, compare prices and order online.`;
   return {
     title,
     description,
