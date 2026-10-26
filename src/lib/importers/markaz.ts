@@ -227,12 +227,32 @@ const SIZE_WORDS: Record<string, string> = {
   "all sizes": "Free Size",
 };
 
-/** "X-Large" → "XL", "3XL" → "XXXL", "all yards" → "Free Size"; letter sizes upper-cased; others kept ("100cm"). */
+/**
+ * Supplier size → ours: "X-Large" → "XL", "3XL" / "XXXL" → "XXXL", "XXXXL" → "4XL",
+ * "L/175" (height) and "5xl 95-105kg" (weight) → "L" / "5XL", "2.5 Meter" (fabric length) →
+ * "Unstitched", "all yards" → "Free Size". Anything else is kept as written ("100cm").
+ */
 export function normalizeSize(raw: string) {
-  const v = raw.trim().replace(/\s+/g, " ");
+  let v = raw
+    .replace(/\[[^\]]*\]|\([^)]*\)/g, " ")
+    .replace(/\s*\/\s*\d+.*$/, "") // "L/175", "3XL/190"
+    .replace(/\s+\d+(\.\d+)?\s*(kg)?(\s*-\s*\d+(\.\d+)?\s*kg)?\s*$/i, "") // "5xl 95-105kg", "M 47.50 kg-55.00 kg"
+    .trim()
+    .replace(/\s+/g, " ");
   const known = SIZE_WORDS[v.toLowerCase()];
   if (known) return known;
-  return /^(x{0,3}s|m|x{0,3}l|[4-9]xl)$/i.test(v) ? v.toUpperCase() : v;
+  if (/^\d+(\.\d+)?\s*(m|meters?|metres?|yards?|yds?|gaz)$/i.test(v)) return "Unstitched";
+  const xs = v.match(/^(x+)(s|l)$/i); // XXXXL → 4XL; up to XXXL stays letters
+  if (xs && xs[1].length >= 4 && xs[2].toLowerCase() === "l") return `${xs[1].length}XL`;
+  const nxl = v.match(/^([2-9])\s*xl$/i);
+  if (nxl) return nxl[1] === "2" ? "XXL" : nxl[1] === "3" ? "XXXL" : `${nxl[1]}XL`;
+  if (/^(x{0,3}s|m|x{0,3}l)$/i.test(v)) v = v.toUpperCase();
+  return v;
+}
+
+/** Sizes we recognise after normalising: letter sizes, Free Size, Unstitched, and kids' heights/ages. */
+function isRecognisedSize(v: string) {
+  return /^(x{0,3}s|m|x{0,3}l|[4-9]xl|free size|unstitched|\d+\s*cm|\d+(-\d+)?\s*(y|yrs?|years?|m|months?))$/i.test(v);
 }
 
 /** "Sky blue (white picture)" → "Sky Blue", "160507 black hooded" → "Black Hooded", "Red [Thickened]]" → "Red". */
@@ -255,12 +275,16 @@ export function readOption(optionName: string, value: string): { size?: string; 
   const isColour = (s: string) => /colou?rs?|shades?/i.test(s);
   const kinds = optionName.split(/\s*[-/&]\s*/).filter(Boolean);
   if (kinds.length === 2 && isSize(kinds[0]) && isColour(kinds[1])) {
-    // Split at the first hyphen, but not the one inside "X-Large" / "XX-Large".
-    const lead = value.match(/^x{1,3}-large/i)?.[0] ?? "";
-    const rest = value.slice(lead.length);
-    const cut = rest.indexOf("-");
-    const sizePart = lead + (cut < 0 ? rest : rest.slice(0, cut));
-    const colourPart = cut < 0 ? "" : rest.slice(cut + 1);
+    // Hyphens can also sit inside the size ("X-Large", "5xl 95-105kg") or the colour ("Off-white"):
+    // use the first hyphen whose left side is a size we recognise and whose right side starts
+    // with a word; otherwise fall back to the first hyphen.
+    const cuts = [...value.matchAll(/-/g)].map((m) => m.index);
+    const cut =
+      cuts.find((i) => isRecognisedSize(normalizeSize(value.slice(0, i))) && /^\s*[a-z]/i.test(value.slice(i + 1))) ??
+      cuts[0] ??
+      -1;
+    const sizePart = cut < 0 ? value : value.slice(0, cut);
+    const colourPart = cut < 0 ? "" : value.slice(cut + 1);
     return { size: normalizeSize(sizePart), color: cleanColour(colourPart) ?? undefined };
   }
   if (isSize(optionName)) return { size: normalizeSize(value) };
@@ -411,6 +435,18 @@ export async function importMarkazProducts(
       if (!free) problem = `${category.name} needs a size and the supplier gives none`;
       else variantInput = [{ options: { size: free }, stock: opts.stockPerItem, price: null, sku: p.variants[0].sku }];
     }
+    // Supplier options that read the same once normalised ("Unstitched" and "2.5 Meter") are one
+    // choice: merge them when the price matches; a different price can't be guessed, so skip.
+    const byOptions = new Map<string, (typeof variantInput)[number]>();
+    for (const vi of variantInput) {
+      const key = JSON.stringify(Object.entries(vi.options).sort());
+      const twin = byOptions.get(key);
+      if (!twin) byOptions.set(key, vi);
+      else if ((twin.price ?? basePrice) !== (vi.price ?? basePrice)) {
+        problem ??= `options ${Object.values(vi.options).join(" / ")} appear twice with different prices`;
+      }
+    }
+    variantInput = [...byOptions.values()];
     if (problem) {
       result("skipped", problem);
       continue;
