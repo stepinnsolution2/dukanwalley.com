@@ -14,7 +14,7 @@ import { Prisma } from "@/generated/prisma/client";
  *   3 × personal         — the shopper viewed (recently counts more) or favourited it
  *   2 × category         — same category as a cart item, or a sibling/parent; or one they browse a lot
  *   1 × match            — price close to the cart's, and the cart's size/colour in stock
- *   1 × boost            — best seller, Hot product, Top seller
+ *   1 × boost            — best seller, Trending / Most Popular (admin-picked), Top seller
  * Hard rules: live in the shopper's market, in stock, not in the cart, not bought in the last
  * 30 days, the cart's size available (for products in the same department), ≤2 per seller.
  */
@@ -37,7 +37,7 @@ export const REASON_LABELS: Record<RecommendationReason, string> = {
   favourite: "In your favourites",
   similar: "Similar to your cart",
   browsing: "Based on your browsing",
-  hot: "Hot right now",
+  hot: "Trending now",
   popular: "Popular",
 };
 
@@ -221,7 +221,7 @@ export async function getRecommendations({
         })
       : [],
     prisma.product.findMany({
-      where: { ...live, OR: [{ isHot: true }, { vendor: { isTopSeller: true } }] },
+      where: { ...live, OR: [{ isHot: true }, { isPopular: true }, { vendor: { isTopSeller: true } }] },
       select: { id: true },
       orderBy: [{ featuredPriority: "desc" }, { updatedAt: "desc" }],
       take: 30,
@@ -259,6 +259,7 @@ export async function getRecommendations({
       categoryId: true,
       vendorId: true,
       isHot: true,
+      isPopular: true,
       vendor: { select: { isTopSeller: true } },
       images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
       variants: { select: { id: true, options: true, stock: true, price: true } },
@@ -300,7 +301,7 @@ export async function getRecommendations({
     const sizeColour = (wantedSizes && hasSizes ? 0.5 : 0) + (colourMatch ? 0.5 : 0);
     const match = (priceMatch + sizeColour) / 2;
     const popular = (salesScore.get(p.id) ?? 0) / maxSales;
-    const boost = clamp01(popular + (p.isHot ? 0.5 : 0) + (p.vendor.isTopSeller ? 0.5 : 0));
+    const boost = clamp01(popular + (p.isHot || p.isPopular ? 0.5 : 0) + (p.vendor.isTopSeller ? 0.5 : 0));
 
     const parts = {
       boughtTogether: WEIGHTS.boughtTogether * boughtTogether,

@@ -19,6 +19,12 @@ import { PAGE_WIDE } from "@/lib/page-layout";
 
 const PAGE_SIZE = 24;
 
+/** Admin-picked home page rows, browsable as full lists. */
+const COLLECTIONS: Record<string, { label: string; where: Prisma.ProductWhereInput }> = {
+  trending: { label: "Trending", where: { isHot: true } },
+  popular: { label: "Most Popular", where: { isPopular: true } },
+};
+
 const SORTS = {
   featured: { label: "Featured", orderBy: [{ featuredPriority: "desc" }, { updatedAt: "desc" }] },
   newest: { label: "Newest", orderBy: [{ createdAt: "desc" }] },
@@ -79,7 +85,7 @@ export function listingMetadata(
     ? `Search results for “${q}”`
     : category
       ? `${category.name}${withParent ? ` – ${category.parentName}` : ""}${pageSuffix}`
-      : `All products${pageSuffix}`;
+      : `${COLLECTIONS[one(sp.collection) ?? ""]?.label ?? "All products"}${pageSuffix}`;
   const description = category
     ? category.description
       ? metaDescription(category.description)
@@ -122,6 +128,8 @@ export async function ProductListing({ sp }: { sp: SP }) {
 
   const q = one(sp.q);
   const zone = one(sp.zone);
+  // Home page collections: ?collection=trending | popular (admin-picked, see Admin › Products).
+  const collection = COLLECTIONS[one(sp.collection) ?? ""];
   const sellerId = one(sp.seller);
   const categorySlug = one(sp.category);
   const min = Number(one(sp.min)) || undefined;
@@ -163,6 +171,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
         }
       : {}),
     ...(zone ? { zoneTags: { has: zone } } : {}),
+    ...(collection?.where ?? {}),
     ...(sellerId ? { vendorId: sellerId } : {}),
   };
   const inCategory: Prisma.ProductWhereInput = scopeIds ? { ...scope, categoryId: { in: scopeIds } } : scope;
@@ -251,6 +260,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
   ];
 
   const activeChips = [
+    ...(collection ? [{ label: collection.label, href: href({ collection: undefined }) }] : []),
     ...(seller ? [{ label: `Seller: ${seller.storeName}`, href: href({ seller: undefined }) }] : []),
     ...(current ? [{ label: current.name, href: href({ category: undefined }) }] : []),
     ...(q ? [{ label: `“${q}”`, href: href({ q: undefined }) }] : []),
@@ -316,6 +326,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
       <AutoSubmitForm action={formAction} className="space-y-6">
         {sort !== "featured" ? <input type="hidden" name="sort" value={sort} /> : null}
         {zone ? <input type="hidden" name="zone" value={zone} /> : null}
+        {collection ? <input type="hidden" name="collection" value={one(sp.collection)} /> : null}
         {sellerId ? <input type="hidden" name="seller" value={sellerId} /> : null}
 
         <section>
@@ -449,7 +460,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
                       <Image src={current.imageUrl} alt="" fill sizes="44px" className="object-contain p-1" />
                     </span>
                   ) : null}
-                  {current?.name ?? seller?.storeName ?? "All products"}
+                  {current?.name ?? seller?.storeName ?? collection?.label ?? "All products"}
                 </h1>
                 <p className="text-sm text-zinc-500">
                   {total} product{total === 1 ? "" : "s"}

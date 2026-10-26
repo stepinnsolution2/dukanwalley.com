@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 import { prisma } from "@/lib/db";
 import { sellableVendorWhere, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
+import type { MarketCode } from "@/lib/markets";
 import { PAGE_WIDE } from "@/lib/page-layout";
 import { absoluteUrl, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import { storeHref } from "@/lib/vendor-slug";
@@ -50,19 +51,13 @@ export default async function HomePage() {
   const market = await getCurrentMarket();
   const live = storefrontProductWhere(market);
   const image = { images: { orderBy: { sortOrder: "asc" }, take: 1 } } as const;
-  const [hot, products, topSellers] = await Promise.all([
-    prisma.product.findMany({
-      where: { ...live, isHot: true },
-      include: image,
-      orderBy: [{ featuredPriority: "desc" }, { updatedAt: "desc" }],
-      take: 16,
-    }),
-    prisma.product.findMany({
-      where: live,
-      include: image,
-      orderBy: [{ featuredPriority: "desc" }, { updatedAt: "desc" }],
-      take: 32,
-    }),
+  const rowOrder = [{ featuredPriority: "desc" }, { updatedAt: "desc" }] as const;
+  // Trending and Most Popular are picked by admins (Admin › Products); Featured is every live product
+  // by featured priority.
+  const [trending, featured, popular, topSellers] = await Promise.all([
+    prisma.product.findMany({ where: { ...live, isHot: true }, include: image, orderBy: [...rowOrder], take: 16 }),
+    prisma.product.findMany({ where: live, include: image, orderBy: [...rowOrder], take: 24 }),
+    prisma.product.findMany({ where: { ...live, isPopular: true }, include: image, orderBy: [...rowOrder], take: 16 }),
     prisma.vendorProfile.findMany({
       where: { ...sellableVendorWhere, market, isTopSeller: true, products: { some: live } },
       select: { id: true, slug: true, storeName: true, logoUrl: true },
@@ -80,16 +75,24 @@ export default async function HomePage() {
 
         <CategoryTiles />
 
-        {hot.length ? (
-          <section>
-            <SectionHeading title="🔥 Hot products" href="/products" linkLabel="View all" />
+        <ProductRow title="🔥 Trending" href="/products?collection=trending" products={trending} market={market} />
+
+        <section>
+          <SectionHeading title="Featured" href="/products" linkLabel="View all" />
+          {featured.length ? (
             <div className={grid}>
-              {hot.map((p) => (
+              {featured.map((p) => (
                 <ProductTile key={p.id} product={p} market={market} />
               ))}
             </div>
-          </section>
-        ) : null}
+          ) : (
+            <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600">
+              New products are on their way. Check back soon!
+            </p>
+          )}
+        </section>
+
+        <ProductRow title="⭐ Most Popular" href="/products?collection=popular" products={popular} market={market} />
 
         {topSellers.length ? (
           <section>
@@ -107,23 +110,35 @@ export default async function HomePage() {
           </section>
         ) : null}
 
-        <section>
-          <SectionHeading title="Featured" href="/products" linkLabel="View all" />
-          <div className={grid}>
-            {products.map((p) => (
-              <ProductTile key={p.id} product={p} market={market} />
-            ))}
-          </div>
-          {products.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600">
-              No live products yet. Seed the database and approve listings from the admin panel.
-            </p>
-          ) : null}
-        </section>
         <AdSlot placement="home_bottom" />
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+/** An admin-picked row of products; hidden while nothing is picked. */
+function ProductRow({
+  title,
+  href,
+  products,
+  market,
+}: {
+  title: string;
+  href: string;
+  products: React.ComponentProps<typeof ProductTile>["product"][];
+  market: MarketCode;
+}) {
+  if (!products.length) return null;
+  return (
+    <section>
+      <SectionHeading title={title} href={href} linkLabel="View all" />
+      <div className={grid}>
+        {products.map((p) => (
+          <ProductTile key={p.slug} product={p} market={market} />
+        ))}
+      </div>
+    </section>
   );
 }
 

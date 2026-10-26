@@ -31,7 +31,7 @@ export function ProductTile({ product: p, market }: { product: TileProduct; mark
         ) : null}
         {p.isHot ? (
           <span className="absolute left-1 top-1 rounded bg-orange-600 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
-            Hot
+            Trending
           </span>
         ) : null}
       </div>

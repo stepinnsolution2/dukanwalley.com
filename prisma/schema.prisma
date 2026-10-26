@@ -225,8 +225,10 @@ model Product {
   displayOnStorefront Boolean               @default(false)
   availableForSale    Boolean               @default(false)
   featuredPriority    Int                   @default(0)
-  /// Shown in the home page "Hot products" row; only approved products can be hot.
+  /// "Trending" on the home page (named isHot before the rename); only approved products.
   isHot               Boolean               @default(false)
+  /// "Most Popular" on the home page; only approved products.
+  isPopular           Boolean               @default(false)
   zoneTags            String[]              @default([])
   /// Supplier the listing was imported from (e.g. "markaz"); null for listings made here.
   source              String?

@@ -49,6 +49,7 @@ export async function POST(req: Request, { params }: Params) {
         displayOnStorefront: false,
         availableForSale: false,
         isHot: false,
+        isPopular: false,
       },
     });
     if (product.salesPersonId) {

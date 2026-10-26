@@ -16,6 +16,7 @@ type Product = {
   displayOnStorefront: boolean;
   availableForSale: boolean;
   isHot: boolean;
+  isPopular: boolean;
   stock: number;
   images: { url: string }[];
   category: { name: string };
@@ -35,8 +36,10 @@ const bulkActions = [
   { action: "show", label: "Show" },
   { action: "stop-selling", label: "Stop selling" },
   { action: "start-selling", label: "Start selling" },
-  { action: "mark-hot", label: "Mark hot" },
-  { action: "unmark-hot", label: "Unmark hot" },
+  { action: "mark-hot", label: "Mark trending" },
+  { action: "unmark-hot", label: "Unmark trending" },
+  { action: "mark-popular", label: "Mark most popular" },
+  { action: "unmark-popular", label: "Unmark most popular" },
 ] as const;
 
 export default function AdminProductsPage() {
@@ -194,7 +197,8 @@ function ProductsList() {
                       ? " · visible, not for sale"
                       : " · hidden"
                   : ""}
-                {p.isHot ? <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700">Hot</span> : null}
+                {p.isHot ? <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700">Trending</span> : null}
+                {p.isPopular ? <span className="ml-2 rounded bg-violet-100 px-1.5 py-0.5 font-medium text-violet-700">Most popular</span> : null}
               </p>
             </div>
             <Link href={`/admin/products/${p.id}`} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">

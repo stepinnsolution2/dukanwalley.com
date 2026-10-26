@@ -27,6 +27,7 @@ type Product = {
   displayOnStorefront: boolean;
   availableForSale: boolean;
   isHot: boolean;
+  isPopular: boolean;
   approvedAt: string | null;
   images: { url: string; color: string | null }[];
   videos: { url: string }[];
@@ -95,8 +96,9 @@ export default function AdminProductPage() {
     return null;
   }
 
-  async function toggleHot(isHot: boolean) {
-    setHotError(await save({ isHot }));
+  /** Home page rows: Trending (isHot) and Most Popular. */
+  async function toggleHome(flags: { isHot?: boolean; isPopular?: boolean }) {
+    setHotError(await save(flags));
   }
 
   if (!product) return <div className="p-6">Loading…</div>;
@@ -219,13 +221,20 @@ export default function AdminProductPage() {
           </div>
 
           {product.approvalStatus === "APPROVED" && canEdit ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm">
-              <label className="flex items-center gap-2 font-medium">
-                <input type="checkbox" checked={product.isHot} onChange={(e) => toggleHot(e.target.checked)} />
-                Hot product
-              </label>
-              <span className="text-zinc-600">Shown in the “Hot products” row on the home page.</span>
-              {hotError ? <p className="w-full text-red-600">{hotError}</p> : null}
+            <div className="space-y-2 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm">
+              <p className="font-semibold text-zinc-900">Home page</p>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <label className="flex items-center gap-2 font-medium">
+                  <input type="checkbox" checked={product.isHot} onChange={(e) => toggleHome({ isHot: e.target.checked })} />
+                  Trending
+                </label>
+                <label className="flex items-center gap-2 font-medium">
+                  <input type="checkbox" checked={product.isPopular} onChange={(e) => toggleHome({ isPopular: e.target.checked })} />
+                  Most popular
+                </label>
+              </div>
+              <p className="text-zinc-600">Ticked products appear in the “Trending” and “Most Popular” rows on the home page.</p>
+              {hotError ? <p className="text-red-600">{hotError}</p> : null}
             </div>
           ) : null}
 

@@ -60,7 +60,8 @@ export async function GET(req: Request) {
 
 const bulkSchema = z.object({
   ids: z.array(z.string()).min(1).max(200),
-  action: z.enum(["hide", "show", "stop-selling", "start-selling", "mark-hot", "unmark-hot"]),
+  // mark-hot / unmark-hot = Trending (the flag was called Hot before).
+  action: z.enum(["hide", "show", "stop-selling", "start-selling", "mark-hot", "unmark-hot", "mark-popular", "unmark-popular"]),
 });
 
 /** Bulk moderation: hide/show listings, stop/start sales, or mark approved ones hot. */
@@ -84,6 +85,8 @@ export async function POST(req: Request) {
       }),
     "mark-hot": () => prisma.product.updateMany({ where: { id: { in: ids }, ...approved }, data: { isHot: true } }),
     "unmark-hot": () => prisma.product.updateMany({ where: { id: { in: ids } }, data: { isHot: false } }),
+    "mark-popular": () => prisma.product.updateMany({ where: { id: { in: ids }, ...approved }, data: { isPopular: true } }),
+    "unmark-popular": () => prisma.product.updateMany({ where: { id: { in: ids } }, data: { isPopular: false } }),
   }[action]();
 
   await prisma.auditLog.create({

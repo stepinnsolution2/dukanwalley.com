@@ -30,6 +30,7 @@ const patchSchema = z.object({
   displayOnStorefront: z.boolean().optional(),
   availableForSale: z.boolean().optional(),
   isHot: z.boolean().optional(),
+  isPopular: z.boolean().optional(),
   imageUrls: z
     .array(mediaUrlSchema)
     .min(1, "Keep at least one image")
@@ -126,9 +127,9 @@ export async function PATCH(req: Request, { params }: Params) {
       { status: 400 },
     );
   }
-  if (d.isHot && existing.approvalStatus !== "APPROVED") {
+  if ((d.isHot || d.isPopular) && existing.approvalStatus !== "APPROVED") {
     return NextResponse.json(
-      { error: "Only approved products can be marked hot" },
+      { error: "Only approved products can be marked Trending or Most Popular" },
       { status: 400 },
     );
   }
@@ -209,6 +210,7 @@ export async function PATCH(req: Request, { params }: Params) {
     if (d.availableForSale !== undefined)
       data.availableForSale = d.availableForSale;
     if (d.isHot !== undefined) data.isHot = d.isHot;
+    if (d.isPopular !== undefined) data.isPopular = d.isPopular;
     if (Object.keys(data).length) {
       await tx.product.update({ where: { id }, data: data as object });
     }
