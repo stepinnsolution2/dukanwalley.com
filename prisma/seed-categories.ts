@@ -29,7 +29,7 @@ export const CATEGORIES: Cat[] = [
         dataType: "select",
         required: true,
         // Free Size / Unstitched: common for Pakistani suits, sarees and nightwear.
-        options: ["XS", "S", "M", "L", "XL", "XXL", "Free Size", "Unstitched"],
+        options: ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "4XL", "5XL", "6XL", "Free Size", "Unstitched"],
         isVariant: true,
       },
       color,
@@ -90,7 +90,7 @@ export const CATEGORIES: Cat[] = [
         name: "Size",
         dataType: "select",
         required: true,
-        options: ["S", "M", "L", "XL", "XXL", "XXXL", "Free Size", "Unstitched"],
+        options: ["S", "M", "L", "XL", "XXL", "XXXL", "4XL", "5XL", "6XL", "Free Size", "Unstitched"],
         isVariant: true,
       },
       color,
@@ -218,7 +218,11 @@ export const CATEGORIES: Cat[] = [
     slug: "beauty-personal-care",
     description:
       "Makeup, skincare, hair care, fragrances and men's grooming. Each listing names the brand and size or volume; check the ingredients and expiry information given by the seller.",
-    attributes: [brand(false), { key: "size_volume", name: "Size / volume", dataType: "text", required: false }],
+    attributes: [
+      brand(false),
+      { key: "size_volume", name: "Size / volume", dataType: "text", required: false },
+      { key: "color", name: "Shade / colour", dataType: "text", required: false, isVariant: true },
+    ],
     children: [
       { name: "Makeup", slug: "beauty-personal-care-makeup", description: "Foundation, lipstick, eye makeup, nail polish and makeup tools." },
       { name: "Skincare", slug: "beauty-personal-care-skincare", description: "Cleansers, moisturisers, serums and sunscreen for different skin types." },

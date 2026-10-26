@@ -111,7 +111,7 @@ export function listingMetadata(
 }
 
 /** Clothing sizes in wearing order, then shoe/number sizes numerically. */
-const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL", "4XL", "5XL", "6XL"];
 function sortSizes(values: string[]) {
   return values.sort((a, b) => {
     const ia = SIZE_ORDER.indexOf(a.toUpperCase());

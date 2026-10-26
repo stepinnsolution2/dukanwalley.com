@@ -138,8 +138,12 @@ export function cleanDescription(html: string): { text: string; facts: Record<st
 
 // --- Categories ---------------------------------------------------------------------------
 
-/** Our category for a Markaz product, by slug (see prisma/seed-categories.ts). */
-type Placement = { slug: string };
+/**
+ * Our category for a Markaz product: category slugs in order of preference (see
+ * prisma/seed-categories.ts). The first one that exists is used, so optional subcategories the
+ * admin added (e.g. Cosmetics › Lipsticks) are used when present.
+ */
+type Placement = { slugs: string[] };
 
 function genderOf(p: MarkazProduct): "Men" | "Women" | "Kids" | null {
   const text = `${p.tags.join(" ")} ${p.type} ${p.title}`.toLowerCase();
@@ -149,41 +153,119 @@ function genderOf(p: MarkazProduct): "Men" | "Women" | "Kids" | null {
   return null;
 }
 
+const place = (...slugs: string[]): Placement => ({ slugs });
+
 /** Ordered rules: the first match wins. Unmatched products are skipped and reported. */
 export function placeProduct(p: MarkazProduct): Placement | null {
   const type = p.type.toLowerCase();
   const tags = p.tags.join(" | ").toLowerCase();
   const all = `${type} | ${tags} | ${p.title.toLowerCase()}`;
   const gender = genderOf(p);
+  const kidsClothing = () => place(/\bboys?\b/.test(all) ? "kids-baby-boys-clothing" : "kids-baby-girls-clothing");
 
   if (/heel|shoe|sandal|slipper|sneaker|khussa|chappal|boot/.test(all)) {
-    return { slug: gender === "Men" ? "shoes-men" : gender === "Kids" ? "shoes-kids" : "shoes-women" };
+    return place(gender === "Men" ? "shoes-men" : gender === "Kids" ? "shoes-kids" : "shoes-women");
   }
-  if (/earring|jhumka/.test(all)) return { slug: "jewellery-watches-earrings" };
-  if (/\brings?\b/.test(type)) return { slug: "jewellery-watches-rings" };
-  if (/bangle|bracelet|kangan/.test(all)) return { slug: "jewellery-watches-bangles-bracelets" };
-  if (/necklace|artificial set|jewel/.test(all)) return { slug: "jewellery-watches-necklaces-sets" };
-  if (/hand ?bag|clutch|purse|tote/.test(all)) return { slug: "bags-accessories-handbags" };
-  if (/cosmetic|makeup|lipstick|foundation|beauty/.test(all)) return { slug: "beauty-personal-care-makeup" };
-  if (/stitched|unstitched|sleep ?wear|night|undergarment|bra|saree|suit|kurt|shirt|trouser|dress|lawn|abaya|hijab|dupatta|shawl/.test(all)) {
-    if (gender === "Kids") {
-      return /\bboys?\b/.test(all) ? { slug: "kids-baby-boys-clothing" } : { slug: "kids-baby-girls-clothing" };
-    }
+  if (/earring|jhumka/.test(all)) return place("jewellery-watches-earrings");
+  if (/\brings?\b/.test(type)) return place("jewellery-watches-rings");
+  if (/bangle|bracelet|kangan/.test(all)) return place("jewellery-watches-bangles-bracelets");
+  if (/necklace|artificial set|jewel/.test(all)) return place("jewellery-watches-necklaces-sets");
+  if (/hand ?bag|clutch|purse|tote/.test(all)) return place("bags-accessories-handbags");
+  if (/cosmetic|makeup|lipstick|lip gloss|\blip\b|foundation|blush|eye ?shadow|mascara|eyeliner|concealer|beauty/.test(all)) {
+    const makeup = "beauty-personal-care-makeup";
+    if (/deal|bundle|kit|\bset\b/.test(type)) return place(`${makeup}-makeup-bundle`, makeup);
+    if (/lip/.test(all)) return place(`${makeup}-lipsticks`, makeup);
+    if (/foundation|concealer|primer/.test(all)) return place(`${makeup}-foundation`, makeup);
+    if (/blush/.test(all)) return place(`${makeup}-blush`, makeup);
+    if (/eye ?shadow|mascara|eyeliner/.test(all)) return place(`${makeup}-eyeshadow`, makeup);
+    if (/deal|bundle|kit|\bset\b/.test(all)) return place(`${makeup}-makeup-bundle`, makeup);
+    return place(makeup);
+  }
+  // Winter and western outerwear ("West" is how Markaz spells vest).
+  if (/hoodie|sweat ?shirt|sweater|pullover|jumper|cardigan|jacket|\bcoat\b|puffer|parka|blazer|gilet|\bvest\b|\bwest\b|fleece|windbreaker/.test(all)) {
+    if (gender === "Kids") return kidsClothing();
+    if (gender === "Men") return place("mens-fashion-waistcoats-jackets");
+    return place("womens-fashion-western-wear", "womens-fashion-ready-to-wear");
+  }
+  if (/stitched|unstitched|sleep ?wear|night|undergarment|bra|saree|suit|kurt|shirt|trouser|dress|lawn|abaya|hijab|dupatta|shawl|clothing/.test(all)) {
+    if (gender === "Kids") return kidsClothing();
     if (gender === "Men") {
-      if (/unstitched|fabric/.test(all)) return { slug: "mens-fashion-unstitched-fabric" };
-      if (/kurta/.test(all)) return { slug: "mens-fashion-kurtas" };
-      if (/trouser|jeans|pant/.test(all)) return { slug: "mens-fashion-trousers-jeans" };
-      if (/t-?shirt|polo|\bshirt/.test(all) && !/kameez/.test(all)) return { slug: "mens-fashion-shirts-t-shirts" };
-      return { slug: "mens-fashion-shalwar-kameez" };
+      if (/unstitched|fabric/.test(all)) return place("mens-fashion-unstitched-fabric");
+      if (/kurta/.test(all)) return place("mens-fashion-kurtas");
+      if (/trouser|jeans|pant/.test(all)) return place("mens-fashion-trousers-jeans");
+      if (/t-?shirt|polo|\bshirt/.test(all) && !/kameez/.test(all)) return place("mens-fashion-shirts-t-shirts");
+      return place("mens-fashion-shalwar-kameez");
     }
-    if (/night|sleep|lounge/.test(all)) return { slug: "womens-fashion-nightwear" };
-    if (/abaya|hijab|niqab/.test(all)) return { slug: "womens-fashion-abayas-hijabs" };
-    if (/dupatta|shawl|stole/.test(all)) return { slug: "womens-fashion-dupattas-shawls" };
-    if (/bridal|saree|formal|party|wedding/.test(all)) return { slug: "womens-fashion-formal-bridal" };
-    if (/unstitched/.test(all)) return { slug: "womens-fashion-unstitched" };
-    return { slug: "womens-fashion-ready-to-wear" };
+    if (/night|sleep|lounge/.test(all)) return place("womens-fashion-nightwear");
+    if (/abaya|hijab|niqab/.test(all)) return place("womens-fashion-abayas-hijabs");
+    if (/dupatta|shawl|stole/.test(all)) return place("womens-fashion-dupattas-shawls");
+    if (/bridal|saree|formal|party|wedding/.test(all)) return place("womens-fashion-formal-bridal");
+    if (/unstitched/.test(all)) return place("womens-fashion-unstitched");
+    return place("womens-fashion-ready-to-wear");
   }
   return null;
+}
+
+// --- Options ------------------------------------------------------------------------------
+
+/** Markaz/Shopify size spellings → ours. */
+const SIZE_WORDS: Record<string, string> = {
+  small: "S",
+  medium: "M",
+  large: "L",
+  "x-large": "XL",
+  "extra large": "XL",
+  "xx-large": "XXL",
+  "2xl": "XXL",
+  "xxx-large": "XXXL",
+  "3xl": "XXXL",
+  "standard size": "Free Size",
+  "one size": "Free Size",
+  "free size": "Free Size",
+  free: "Free Size",
+  "all yards": "Free Size",
+  "all sizes": "Free Size",
+};
+
+/** "X-Large" → "XL", "3XL" → "XXXL", "all yards" → "Free Size"; letter sizes upper-cased; others kept ("100cm"). */
+export function normalizeSize(raw: string) {
+  const v = raw.trim().replace(/\s+/g, " ");
+  const known = SIZE_WORDS[v.toLowerCase()];
+  if (known) return known;
+  return /^(x{0,3}s|m|x{0,3}l|[4-9]xl)$/i.test(v) ? v.toUpperCase() : v;
+}
+
+/** "Sky blue (white picture)" → "Sky Blue", "160507 black hooded" → "Black Hooded", "Red [Thickened]]" → "Red". */
+export function cleanColour(raw: string) {
+  const v = raw
+    .replace(/\[[^\]]*\]*|\([^)]*\)*|\{[^}]*\}*/g, " ")
+    .replace(/[[\](){}]/g, " ")
+    .replace(/^\s*\d{3,}\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return v ? titleCase(v.toLowerCase()) : null;
+}
+
+/**
+ * Reads one supplier option value. Markaz often combines two choices in one column, e.g. option
+ * "Size-Color" with values like "M-White" or "3XL-Red [Thickened fleece-lined]".
+ */
+export function readOption(optionName: string, value: string): { size?: string; color?: string } {
+  const isSize = (s: string) => /size|height|age|yard/i.test(s);
+  const isColour = (s: string) => /colou?rs?|shades?/i.test(s);
+  const kinds = optionName.split(/\s*[-/&]\s*/).filter(Boolean);
+  if (kinds.length === 2 && isSize(kinds[0]) && isColour(kinds[1])) {
+    // Split at the first hyphen, but not the one inside "X-Large" / "XX-Large".
+    const lead = value.match(/^x{1,3}-large/i)?.[0] ?? "";
+    const rest = value.slice(lead.length);
+    const cut = rest.indexOf("-");
+    const sizePart = lead + (cut < 0 ? rest : rest.slice(0, cut));
+    const colourPart = cut < 0 ? "" : rest.slice(cut + 1);
+    return { size: normalizeSize(sizePart), color: cleanColour(colourPart) ?? undefined };
+  }
+  if (isSize(optionName)) return { size: normalizeSize(value) };
+  if (isColour(optionName)) return { color: cleanColour(value) ?? undefined };
+  return {};
 }
 
 // --- House store --------------------------------------------------------------------------
@@ -227,11 +309,9 @@ export type ImportResult = {
   productId?: string;
 };
 
-const SIZE_ALIASES: Record<string, string> = { "standard size": "Free Size", "one size": "Free Size" };
-
-/** Matches a supplier value to one of a list attribute's options, ignoring case. */
+/** Matches a (normalised) supplier value to one of a list attribute's options, ignoring case. */
 function matchOption(value: string, options: string[]) {
-  const v = SIZE_ALIASES[value.toLowerCase()] ?? value;
+  const v = normalizeSize(value);
   return options.find((o) => o.toLowerCase() === v.toLowerCase()) ?? null;
 }
 
@@ -277,7 +357,7 @@ export async function importMarkazProducts(
     };
 
     const place = placeProduct(p);
-    const category = place ? categories.find((c) => c.slug === place.slug) : undefined;
+    const category = place?.slugs.map((slug) => categories.find((c) => c.slug === slug)).find(Boolean);
     if (!place || !category) {
       result("skipped", `no category for Markaz type "${p.type}" (tags: ${p.tags.join(", ")})`);
       continue;
@@ -302,20 +382,22 @@ export async function importMarkazProducts(
     // Options: the supplier's Size/Color column, when this category offers that choice.
     let variantInput: { options: Record<string, string>; stock: number; price: number | null; sku: string }[] = [];
     let problem: string | null = null;
-    if (sizeDef && /size/i.test(p.optionName)) {
-      variantInput = p.variants.map((v) => {
-        const size = sizeDef.dataType === "select" ? matchOption(v.value, sizeDef.options) : v.value;
-        if (!size) problem = `size "${v.value}" isn't one of ${category.name}'s sizes (${sizeDef.options.join(", ")})`;
+    const parsed = p.variants.map((v) => ({ v, ...readOption(p.optionName, v.value) }));
+    if (sizeDef && parsed.every((x) => x.size)) {
+      variantInput = parsed.map(({ v, size: raw, color }) => {
+        const size = sizeDef.dataType === "select" ? matchOption(raw!, sizeDef.options) : raw!;
+        if (!size) problem = `size "${raw}" (from "${v.value}") isn't one of ${category.name}'s sizes (${sizeDef.options.join(", ")})`;
+        const shade = color ?? colour;
         return {
-          options: { size: size ?? v.value, ...(colorDef && colour ? { [colorDef.key]: colour } : {}) },
+          options: { size: size ?? raw!, ...(colorDef && shade ? { [colorDef.key]: shade } : {}) },
           stock: opts.stockPerItem,
           price: v.price === basePrice ? null : v.price,
           sku: v.sku,
         };
       });
-    } else if (colorDef && /colou?r/i.test(p.optionName)) {
-      variantInput = p.variants.map((v) => ({
-        options: { [colorDef.key]: titleCase(v.value) },
+    } else if (colorDef && parsed.every((x) => x.color)) {
+      variantInput = parsed.map(({ v, color }) => ({
+        options: { [colorDef.key]: color! },
         stock: opts.stockPerItem,
         price: v.price === basePrice ? null : v.price,
         sku: v.sku,
