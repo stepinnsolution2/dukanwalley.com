@@ -40,7 +40,7 @@ export async function HomeHero() {
         }`}
       >
         {banners.length ? (
-          <div className="relative aspect-[45/14] w-full sm:absolute sm:inset-0 sm:-z-10 sm:aspect-auto">
+          <div className="relative aspect-[45/14] w-full sm:absolute sm:inset-0 sm:z-0 sm:aspect-auto">
             <Rotator
               label="Featured"
               slides={banners.map((b, i) => (
@@ -58,7 +58,8 @@ export async function HomeHero() {
             />
           </div>
         ) : null}
-        {/* Keeps the headline readable over the banner (not needed on phones, where it sits below). */}
+        {/* Keeps the headline readable over the banner (not needed on phones, where it sits below).
+            Same layer as the banner but later in the page, so it paints on top of it. */}
         <div className="pointer-events-none absolute inset-0 z-0 hidden bg-gradient-to-r from-black/70 via-black/40 to-black/5 sm:block" />
 
         {/* Clicks pass through empty space to the slideshow controls underneath. */}
