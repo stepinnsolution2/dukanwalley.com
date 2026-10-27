@@ -75,7 +75,8 @@ export default async function HomePage() {
     <>
       <JsonLd data={siteJsonLd} />
       <SiteHeader />
-      <main className={`${PAGE_WIDE} flex flex-col gap-5`}>
+      {/* No top padding: the banner sits right under the header. */}
+      <main className={`${PAGE_WIDE} flex flex-col gap-5 !pt-0`}>
         <HomeHero />
 
         <CategoryTiles />

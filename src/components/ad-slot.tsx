@@ -9,7 +9,7 @@ export async function AdSlot({ placement, className = "" }: { placement: AdPlace
   const spec = AD_PLACEMENTS[placement];
   return (
     <aside aria-label="Advertisement" className={className}>
-      <div className="relative w-full overflow-hidden rounded-2xl bg-zinc-100" style={{ aspectRatio: `${spec.width} / ${spec.height}` }}>
+      <div className="relative w-full overflow-hidden bg-zinc-100" style={{ aspectRatio: `${spec.width} / ${spec.height}` }}>
         <AdRotator ads={ads} label={`${spec.label} advertisements`} sizes={`(max-width: 1024px) 100vw, ${spec.width}px`} />
       </div>
     </aside>

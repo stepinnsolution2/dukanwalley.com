@@ -24,7 +24,7 @@ export function CartAdSlot({ open }: { open: boolean }) {
   const spec = AD_PLACEMENTS.cart;
   return (
     <aside aria-label="Advertisement" className="mt-6">
-      <div className="relative w-full overflow-hidden rounded-2xl bg-zinc-100" style={{ aspectRatio: `${spec.width} / ${spec.height}` }}>
+      <div className="relative w-full overflow-hidden bg-zinc-100" style={{ aspectRatio: `${spec.width} / ${spec.height}` }}>
         <AdRotator ads={ads} label="Cart advertisements" sizes="(max-width: 1024px) 100vw, 1200px" />
       </div>
     </aside>

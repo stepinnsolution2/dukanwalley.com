@@ -35,7 +35,7 @@ export async function HomeHero() {
       <section
         // Phones: the banner on top at its own shape, the headline and search on a solid block below.
         // Larger screens: the text over the banner. On laptops the ad sets the row height.
-        className={`relative isolate flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-teal-900 via-teal-800 to-zinc-900 shadow sm:block sm:min-h-[340px] lg:min-h-0 ${
+        className={`relative isolate flex flex-col overflow-hidden bg-gradient-to-br from-teal-900 via-teal-800 to-zinc-900 shadow sm:block sm:min-h-[340px] lg:min-h-0 ${
           ads.length ? "" : "lg:aspect-[45/14]"
         }`}
       >
@@ -97,7 +97,7 @@ export async function HomeHero() {
       </section>
 
       {ads.length ? (
-        <aside aria-label="Advertisement" className="relative overflow-hidden rounded-2xl bg-zinc-100 shadow" style={{ aspectRatio: `${ad.width} / ${ad.height}` }}>
+        <aside aria-label="Advertisement" className="relative overflow-hidden bg-zinc-100 shadow" style={{ aspectRatio: `${ad.width} / ${ad.height}` }}>
           <AdRotator ads={ads} label="Sponsored" sizes="(max-width: 1024px) 100vw, 25vw" />
         </aside>
       ) : null}

@@ -69,10 +69,10 @@ export async function SiteHeader() {
     <>
       <CartBackdrop />
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-md">
-        <div className={`${CONTAINER} flex items-center justify-between gap-3 py-2.5 md:py-3`}>
+        <div className={`${CONTAINER} flex items-center justify-between gap-3 py-1.5 md:py-2.5`}>
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="DukanWalley home">
-            <Image src="/logo-mark.png" alt="" width={50} height={40} priority className="h-9 w-auto md:h-10" />
-            <Image src="/logo-wordmark.png" alt="DukanWalley" width={139} height={24} priority className="h-5 w-auto md:h-6" />
+            <Image src="/logo-mark.png" alt="" width={50} height={40} priority className="h-8 w-auto" />
+            <Image src="/logo-wordmark.png" alt="DukanWalley" width={139} height={24} priority className="h-5 w-auto" />
           </Link>
 
           {/* Laptops and tablets: everything inline. */}
