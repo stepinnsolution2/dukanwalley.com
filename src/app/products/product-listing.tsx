@@ -15,6 +15,8 @@ import { breadcrumbJsonLd, inMarket, metaDescription, SITE_NAME, type Crumb } fr
 import { isColorKey } from "@/lib/variants";
 import type { Prisma } from "@/generated/prisma/client";
 import { AutoSubmitForm } from "./auto-submit-form";
+import { publicStoreName } from "@/lib/vendor-slug";
+import { WasPrice } from "@/components/was-price";
 import { PAGE_WIDE } from "@/lib/page-layout";
 
 const PAGE_SIZE = 24;
@@ -148,7 +150,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
   });
   const current = categorySlug ? categories.find((c) => c.slug === categorySlug) : undefined;
   const seller = sellerId
-    ? await prisma.vendorProfile.findUnique({ where: { id: sellerId }, select: { id: true, storeName: true } })
+    ? await prisma.vendorProfile.findUnique({ where: { id: sellerId }, select: { id: true, storeName: true, displayName: true } })
     : null;
   const scopeIds = current ? categoryAndDescendantIds(current.id, categories) : undefined;
 
@@ -262,7 +264,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
 
   const activeChips = [
     ...(collection ? [{ label: collection.label, href: href({ collection: undefined }) }] : []),
-    ...(seller ? [{ label: `Seller: ${seller.storeName}`, href: href({ seller: undefined }) }] : []),
+    ...(seller ? [{ label: `Seller: ${publicStoreName(seller)}`, href: href({ seller: undefined }) }] : []),
     ...(current ? [{ label: current.name, href: href({ category: undefined }) }] : []),
     ...(q ? [{ label: `“${q}”`, href: href({ q: undefined }) }] : []),
     ...(min || max
@@ -461,7 +463,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
                       <Image src={current.imageUrl} alt="" fill sizes="44px" className="object-contain p-1" />
                     </span>
                   ) : null}
-                  {current?.name ?? seller?.storeName ?? collection?.label ?? "All products"}
+                  {current?.name ?? (seller ? publicStoreName(seller) : null) ?? collection?.label ?? "All products"}
                 </h1>
                 <p className="text-sm text-zinc-500">
                   {total} product{total === 1 ? "" : "s"}
@@ -551,6 +553,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
                             {varies ? "From " : ""}
                             {formatMoney(market, from)}
                           </p>
+                          {varies ? null : <WasPrice market={market} price={from} compareAt={p.compareAtPrice} />}
                         </div>
                       </Link>
                       <FavoriteButton

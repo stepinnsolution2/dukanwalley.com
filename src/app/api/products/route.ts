@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
 import { isMarketCode, MARKETS } from "@/lib/markets";
+import { publicVendor } from "@/lib/vendor-slug";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -27,11 +28,15 @@ export async function GET(req: Request) {
     include: {
       images: { orderBy: { sortOrder: "asc" } },
       category: true,
-      vendor: { select: { id: true, storeName: true, logoUrl: true, market: true } },
+      vendor: { select: { id: true, storeName: true, displayName: true, logoUrl: true, market: true } },
     },
     orderBy: [{ featuredPriority: "desc" }, { updatedAt: "desc" }],
     take: 48,
   });
 
-  return NextResponse.json({ market, currency: MARKETS[market].currency, products });
+  return NextResponse.json({
+    market,
+    currency: MARKETS[market].currency,
+    products: products.map((p) => ({ ...p, vendor: publicVendor(p.vendor) })),
+  });
 }

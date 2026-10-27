@@ -39,6 +39,10 @@ const patchSchema = z.object({
   // null clears the override so the vendor falls back to category/global rules.
   commissionOverrideBps: z.number().int().min(0).max(10000).nullable().optional(),
   isTopSeller: z.boolean().optional(),
+  /** Public name shown to shoppers instead of the real store name; null shows the real name. */
+  displayName: z.string().trim().max(80).nullable().optional(),
+  loginEmail: z.string().trim().toLowerCase().email().optional(),
+  newPassword: z.string().min(8, "Password must be at least 8 characters").max(128).optional(),
 });
 
 /** Which permission each editable field needs; see src/lib/permissions.ts. */
@@ -52,6 +56,9 @@ const fieldPermissions: Record<Exclude<keyof z.infer<typeof patchSchema>, "id">,
   suspendedReason: "vendors:restrict",
   commissionOverrideBps: "vendors:commission",
   isTopSeller: "vendors:manage",
+  displayName: "vendors:manage",
+  loginEmail: "vendors:login",
+  newPassword: "vendors:login",
 };
 
 export async function GET() {
@@ -145,9 +152,9 @@ export async function PATCH(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { id, ...data } = parsed.data;
+  const { id, loginEmail, newPassword, ...data } = parsed.data;
 
-  const fields = Object.keys(data) as (keyof typeof data)[];
+  const fields = Object.keys(parsed.data).filter((k) => k !== "id") as (keyof typeof fieldPermissions)[];
   if (!fields.length) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
@@ -157,7 +164,34 @@ export async function PATCH(req: Request) {
   const vendor = await prisma.vendorProfile.findUnique({ where: { id } });
   if (!vendor) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.vendorProfile.update({ where: { id }, data });
+  if (data.displayName !== undefined) {
+    data.displayName = data.displayName || null;
+    // The store URL follows the public name, so the real name isn't visible in links either.
+    const shown = data.displayName ?? vendor.storeName;
+    if (shown !== (vendor.displayName ?? vendor.storeName)) {
+      (data as { slug?: string }).slug = await uniqueVendorSlug(shown);
+    }
+  }
+
+  if (loginEmail !== undefined) {
+    const taken = await prisma.user.findUnique({ where: { email: loginEmail }, select: { id: true } });
+    if (taken && taken.id !== vendor.userId) {
+      return NextResponse.json({ error: "Another account already uses that email" }, { status: 409 });
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (Object.keys(data).length) await tx.vendorProfile.update({ where: { id }, data });
+    if (loginEmail !== undefined || newPassword !== undefined) {
+      await tx.user.update({
+        where: { id: vendor.userId },
+        data: {
+          ...(loginEmail !== undefined ? { email: loginEmail } : {}),
+          ...(newPassword !== undefined ? { passwordHash: await hashPassword(newPassword) } : {}),
+        },
+      });
+    }
+  });
 
   await prisma.auditLog.create({
     data: {
@@ -165,7 +199,10 @@ export async function PATCH(req: Request) {
       action: "VENDOR_ADMIN_UPDATE",
       entity: "VendorProfile",
       entityId: id,
-      meta: JSON.parse(JSON.stringify(data)),
+      // Never log the password itself.
+      meta: JSON.parse(
+        JSON.stringify({ ...data, ...(loginEmail ? { loginEmail } : {}), ...(newPassword ? { passwordChanged: true } : {}) }),
+      ),
     },
   });
 

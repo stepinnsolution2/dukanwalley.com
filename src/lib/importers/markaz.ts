@@ -15,7 +15,8 @@ import { Prisma } from "@/generated/prisma/client";
 export const SOURCE = "markaz";
 const MARKET = "PK" as const;
 
-export type MarkazVariant = { value: string; sku: string; price: number };
+/** `compareAt`: the supplier's optional "Variant Compare At Price" (a crossed-out "was" price). */
+export type MarkazVariant = { value: string; sku: string; price: number; compareAt?: number };
 export type MarkazProduct = {
   /** Markaz product id, from the SKU "MKZ-{productId}-{variantId}". */
   ref: string;
@@ -45,6 +46,8 @@ export function parseShopifyRows(rows: string[][]): MarkazProduct[] {
     price: col("Variant Price"),
     image: col("Image Src"),
   };
+  // Optional: not every supplier file has it.
+  const compareCol = col("Variant Compare At Price");
   for (const [k, i] of Object.entries(c)) {
     if (i < 0) throw new Error(`Missing column for ${k}: is this a Markaz "Shopify" export?`);
   }
@@ -68,7 +71,13 @@ export function parseShopifyRows(rows: string[][]): MarkazProduct[] {
     }
     const sku = r[c.sku]?.trim();
     if (sku) {
-      p.variants.push({ value: r[c.optionValue]?.trim() ?? "", sku, price: Number(r[c.price]) });
+      const compareAt = compareCol >= 0 ? Number(r[compareCol]) : NaN;
+      p.variants.push({
+        value: r[c.optionValue]?.trim() ?? "",
+        sku,
+        price: Number(r[c.price]),
+        ...(Number.isFinite(compareAt) && compareAt > 0 ? { compareAt } : {}),
+      });
       p.ref ||= sku.match(/^MKZ-(\d+)-/)?.[1] ?? "";
     }
     const img = r[c.image]?.trim();
@@ -362,6 +371,8 @@ export async function importMarkazProducts(
   opts: {
     vendorId: string;
     stockPerItem: number;
+    /** false: new products show shoppers "In stock" instead of the quantity. */
+    showStockCount?: boolean;
     dryRun?: boolean;
     log?: (msg: string) => void;
     /** Called after each product is created, updated or skipped (for progress). */
@@ -400,6 +411,10 @@ export async function importMarkazProducts(
     const sizeDef = defs.find((d) => d.isVariant && d.key === "size");
     const colorDef = defs.find((d) => d.isVariant && /^colou?r$/.test(d.key));
     const basePrice = Math.min(...p.variants.map((v) => v.price));
+    // The "was" price of the cheapest option, kept only when it's a valid price above it.
+    const rawCompare = p.variants.find((v) => v.price === basePrice)?.compareAt;
+    const compareAtPrice =
+      rawCompare && rawCompare > basePrice && isValidPrice(MARKET, rawCompare) ? rawCompare : null;
     // A single colour named in the description becomes an option, so colour filters find it.
     const colour = facts.color && !/[,/&]| and /i.test(facts.color) ? titleCase(facts.color) : null;
 
@@ -474,9 +489,15 @@ export async function importMarkazProducts(
     if (existing) {
       const changes: string[] = [];
       if (Number(existing.basePrice) !== basePrice) changes.push(`price ${existing.basePrice} → ${basePrice}`);
+      const oldCompare = existing.compareAtPrice === null ? null : Number(existing.compareAtPrice);
+      if (oldCompare !== compareAtPrice) changes.push(`was-price ${oldCompare ?? "none"} → ${compareAtPrice ?? "none"}`);
       if (!opts.dryRun) {
         await prisma.$transaction(async (tx) => {
-          await tx.product.update({ where: { id: existing.id }, data: { basePrice: new Prisma.Decimal(basePrice) } });
+          await tx.product.update({ where: { id: existing.id }, data: {
+              basePrice: new Prisma.Decimal(basePrice),
+              compareAtPrice: compareAtPrice === null ? null : new Prisma.Decimal(compareAtPrice),
+            },
+          });
           for (const v of variants.variants) {
             const row = existing.variants.find((x) => x.sku === v.sku);
             if (row) await tx.productVariant.update({ where: { id: row.id }, data: { price: v.price } });
@@ -491,7 +512,7 @@ export async function importMarkazProducts(
     const watermarked = p.imageUrls.length - sources.length;
     const summary = [
       `${category.parent ? `${category.parent.name} › ` : ""}${category.name}`,
-      `Rs ${basePrice}`,
+      compareAtPrice ? `Rs ${basePrice} (was ${compareAtPrice})` : `Rs ${basePrice}`,
       variants.variants.length ? `${variants.variants.length} option(s)` : "no options",
       `${sources.length} image(s)${watermarked ? `, ${watermarked} watermarked skipped` : ""}`,
     ].join(" · ");
@@ -520,6 +541,8 @@ export async function importMarkazProducts(
           name: p.title,
           description,
           basePrice: new Prisma.Decimal(basePrice),
+          compareAtPrice: compareAtPrice === null ? null : new Prisma.Decimal(compareAtPrice),
+          showStockCount: opts.showStockCount ?? true,
           salesTaxBps: 0,
           stock: variants.variants.length ? 0 : opts.stockPerItem,
           sku: variants.variants.length ? null : p.variants[0].sku,

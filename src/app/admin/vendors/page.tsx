@@ -30,6 +30,7 @@ export default async function AdminVendorsPage({ searchParams }: { searchParams:
       ? {
           OR: [
             { storeName: { contains: q, mode: "insensitive" } },
+            { displayName: { contains: q, mode: "insensitive" } },
             { user: { email: { contains: q, mode: "insensitive" } } },
           ],
         }
@@ -86,6 +87,7 @@ export default async function AdminVendorsPage({ searchParams }: { searchParams:
               <tr key={v.id} className="border-b border-zinc-100">
                 <td className="px-4 py-3">
                   <Link href={`/admin/vendors/${v.id}`} className="font-medium text-teal-800 hover:underline">{v.storeName}</Link>
+                  {v.displayName ? <span className="block text-xs text-zinc-500">shown as {v.displayName}</span> : null}
                   {v.isTopSeller ? <span className={`ml-2 ${badge("bg-amber-100 text-amber-800")}`}>Top seller</span> : null}
                   <span className="block text-xs text-zinc-500">{v.user.email}</span>
                 </td>

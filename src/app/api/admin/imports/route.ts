@@ -56,6 +56,8 @@ export async function POST(req: Request) {
       bytes: Buffer.from(await file.arrayBuffer()),
       vendorId: store.id,
       stockPerItem,
+      // "0": shoppers see only "In stock" for these products.
+      showStockCount: form?.get("showStockCount") !== "0",
       userId: authz.session.user.id,
     });
     return NextResponse.json({ id: job.id });

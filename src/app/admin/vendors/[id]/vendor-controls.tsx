@@ -15,6 +15,10 @@ type Vendor = {
   suspendedReason: string | null;
   commissionOverrideBps: number | null;
   isTopSeller: boolean;
+  storeName: string;
+  displayName: string | null;
+  slug: string | null;
+  loginEmail: string;
 };
 
 const RESTRICTIONS = [
@@ -31,12 +35,14 @@ export function VendorControls({
   canManage,
   canRestrict,
   canCommission,
+  canLogin,
 }: {
   vendor: Vendor;
   labels: { nationalId: string; businessRegNo: string; taxRegNo: string };
   canManage: boolean;
   canRestrict: boolean;
   canCommission: boolean;
+  canLogin: boolean;
 }) {
   const router = useRouter();
   const [kyc, setKyc] = useState({
@@ -48,6 +54,8 @@ export function VendorControls({
   });
   const [restriction, setRestriction] = useState({ restriction: vendor.restriction, suspendedReason: vendor.suspendedReason ?? "" });
   const [commission, setCommission] = useState(vendor.commissionOverrideBps === null ? "" : String(vendor.commissionOverrideBps / 100));
+  const [displayName, setDisplayName] = useState(vendor.displayName ?? "");
+  const [login, setLogin] = useState({ email: vendor.loginEmail, password: "" });
   const [msg, setMsg] = useState<{ section: string; text: string; ok: boolean } | null>(null);
 
   async function save(section: string, body: Record<string, unknown>) {
@@ -59,6 +67,7 @@ export function VendorControls({
     const j = await res.json().catch(() => ({}));
     setMsg({ section, text: res.ok ? "Saved" : describeError(j.error), ok: res.ok });
     if (res.ok) router.refresh();
+    return res.ok;
   }
 
   const nullIfEmpty = (s: string) => (s.trim() === "" ? null : s.trim());
@@ -79,6 +88,67 @@ export function VendorControls({
           {note("top")}
         </section>
       ) : null}
+      <div className="grid gap-4 md:grid-cols-2">
+        {canManage ? (
+          <section className={box}>
+            <h2 className="font-semibold">Public store name</h2>
+            <p className="text-xs text-zinc-500">
+              Shoppers see this name instead of “{vendor.storeName}” on product pages, the store page and in their cart. The
+              store link changes to match it. Leave it empty to show the real name.
+            </p>
+            <label className="block">
+              Name shown to shoppers
+              <input className={input} value={displayName} maxLength={80} onChange={(e) => setDisplayName(e.target.value)} placeholder={vendor.storeName} />
+            </label>
+            {vendor.slug ? (
+              <p className="text-xs text-zinc-500">
+                Store page: <a href={`/store/${vendor.slug}`} target="_blank" className="text-teal-700 underline">/store/{vendor.slug}</a>
+              </p>
+            ) : null}
+            <button type="button" onClick={() => save("display", { displayName: nullIfEmpty(displayName) })} className="rounded bg-teal-700 px-3 py-1.5 text-white">
+              Save name
+            </button>
+            {note("display")}
+          </section>
+        ) : null}
+        {canLogin ? (
+          <section className={box}>
+            <h2 className="font-semibold">Store login</h2>
+            <p className="text-xs text-zinc-500">The email and password this store uses to sign in to its seller panel.</p>
+            <label className="block">
+              Login email
+              <input className={input} type="email" value={login.email} onChange={(e) => setLogin((s) => ({ ...s, email: e.target.value }))} />
+            </label>
+            <label className="block">
+              New password <span className="text-xs text-zinc-500">(at least 8 characters; leave empty to keep the current one)</span>
+              <input className={input} type="text" autoComplete="new-password" value={login.password} onChange={(e) => setLogin((s) => ({ ...s, password: e.target.value }))} />
+            </label>
+            <button
+              type="button"
+              onClick={async () => {
+                const body: Record<string, string> = {};
+                if (login.email.trim() && login.email.trim().toLowerCase() !== vendor.loginEmail) body.loginEmail = login.email.trim();
+                if (login.password) {
+                  if (login.password.length < 8) {
+                    setMsg({ section: "login", text: "Password must be at least 8 characters", ok: false });
+                    return;
+                  }
+                  body.newPassword = login.password;
+                }
+                if (!Object.keys(body).length) {
+                  setMsg({ section: "login", text: "Nothing changed", ok: false });
+                  return;
+                }
+                if (await save("login", body)) setLogin((s) => ({ ...s, password: "" }));
+              }}
+              className="rounded bg-teal-700 px-3 py-1.5 text-white"
+            >
+              Save login
+            </button>
+            {note("login")}
+          </section>
+        ) : null}
+      </div>
     <div className="grid gap-4 md:grid-cols-3">
       {canManage ? (
         <section className={box}>

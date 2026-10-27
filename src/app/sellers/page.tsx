@@ -9,7 +9,7 @@ import { getCurrentMarket } from "@/lib/market-session";
 import { MARKETS } from "@/lib/markets";
 import { PAGE_WIDE } from "@/lib/page-layout";
 import { SITE_NAME } from "@/lib/seo";
-import { storeHref } from "@/lib/vendor-slug";
+import { publicStoreName, storeHref } from "@/lib/vendor-slug";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +28,7 @@ export default async function SellersPage() {
       id: true,
       slug: true,
       storeName: true,
+      displayName: true,
       logoUrl: true,
       city: true,
       isTopSeller: true,
@@ -56,8 +57,8 @@ export default async function SellersPage() {
                   href={storeHref(s)}
                   className="flex h-full flex-col items-center gap-2 rounded-lg border border-zinc-200 bg-white p-3 text-center hover:border-teal-300 hover:shadow-sm"
                 >
-                  <SellerAvatar name={s.storeName} logoUrl={s.logoUrl} />
-                  <span className="line-clamp-2 text-sm font-medium text-zinc-900">{s.storeName}</span>
+                  <SellerAvatar name={publicStoreName(s)} logoUrl={s.logoUrl} />
+                  <span className="line-clamp-2 text-sm font-medium text-zinc-900">{publicStoreName(s)}</span>
                   <span className="text-xs text-zinc-500">
                     {s._count.products} product{s._count.products === 1 ? "" : "s"}
                     {s.city ? ` · ${s.city}` : ""}

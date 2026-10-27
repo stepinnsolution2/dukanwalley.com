@@ -155,3 +155,11 @@ export function formatMoney(market: MarketCode, amount: number | string | { toSt
 export function deliveryRegions(m: MarketConfig): readonly string[] {
   return m.deliveryRegions ?? m.regions;
 }
+
+/** A "was" price must be a valid price above the selling price; null/undefined means none. */
+export function compareAtPriceError(market: MarketCode, compareAt: number | null | undefined, price: number) {
+  if (compareAt == null) return null;
+  if (!isValidPrice(market, compareAt)) return `Compare-at price: ${priceRuleMessage(market)}`;
+  if (compareAt <= price) return "The compare-at (“was”) price must be higher than the price";
+  return null;
+}

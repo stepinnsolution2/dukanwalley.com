@@ -18,6 +18,7 @@ type JobSummary = {
 type Job = JobSummary & {
   storeName: string;
   stockPerItem: number;
+  showStockCount: boolean;
   preview: Result[];
   results: Result[] | null;
   error: string | null;
@@ -40,6 +41,7 @@ export default function ImportPage() {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [vendorId, setVendorId] = useState("");
   const [stock, setStock] = useState("50");
+  const [showCount, setShowCount] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [busy, setBusy] = useState(false);
@@ -92,6 +94,7 @@ export default function ImportPage() {
     body.set("file", file);
     body.set("vendorId", vendorId);
     body.set("stockPerItem", stock);
+    body.set("showStockCount", showCount ? "1" : "0");
     const res = await fetch("/api/admin/imports", { method: "POST", body });
     const j = await res.json().catch(() => ({}));
     setBusy(false);
@@ -161,6 +164,17 @@ export default function ImportPage() {
             className="mt-1 w-full rounded-lg border border-zinc-300 px-2 py-1.5"
           />
         </label>
+        <label className="block text-sm">
+          <span className="font-medium">Shoppers see</span>
+          <select
+            value={showCount ? "count" : "in-stock"}
+            onChange={(e) => setShowCount(e.target.value === "count")}
+            className="mt-1 w-full rounded-lg border border-zinc-300 px-2 py-1.5"
+          >
+            <option value="count">Stock quantity</option>
+            <option value="in-stock">Only “In stock”</option>
+          </select>
+        </label>
         <button disabled={busy || !file} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">
           {busy && !job ? "Reading file…" : "Preview"}
         </button>
@@ -173,7 +187,7 @@ export default function ImportPage() {
             <div>
               <h2 className="font-semibold">{job.fileName}</h2>
               <p className="text-sm text-zinc-600">
-                {STATUS_LABEL[job.status] ?? job.status} · {job.total} products · into {job.storeName} · stock {job.stockPerItem} each
+                {STATUS_LABEL[job.status] ?? job.status} · {job.total} products · into {job.storeName} · stock {job.stockPerItem} each{job.showStockCount ? "" : " (shown as “In stock”)"}
               </p>
             </div>
             {canStart ? (

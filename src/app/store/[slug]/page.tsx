@@ -5,18 +5,21 @@ import { JsonLd } from "@/components/json-ld";
 import { prisma } from "@/lib/db";
 import { sellableVendorWhere } from "@/lib/catalog";
 import { breadcrumbJsonLd, SITE_NAME } from "@/lib/seo";
+import { publicVendor } from "@/lib/vendor-slug";
 import { isFilteredListing, one, ProductListing, type SP } from "../../products/product-listing";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<SP> };
 
-const getStore = cache((slug: string) =>
-  prisma.vendorProfile.findFirst({
+// Shoppers only ever see the public store name.
+const getStore = cache(async (slug: string) => {
+  const store = await prisma.vendorProfile.findFirst({
     where: { slug, ...sellableVendorWhere },
-    select: { id: true, slug: true, storeName: true, city: true, logoUrl: true },
-  }),
-);
+    select: { id: true, slug: true, storeName: true, displayName: true, city: true, logoUrl: true },
+  });
+  return store && publicVendor(store);
+});
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const store = await getStore(decodeURIComponent((await params).slug));

@@ -1,7 +1,9 @@
 // One-off (2026-10-28): first import of Alpha Digital's catalogue from their Shopify store's public
 // product feed, before they send an Excel file. Prices are their current sale prices; names and
 // descriptions are written here from the product facts (brand, model, type, resolution), not copied.
-// Re-running only refreshes prices of products already imported.
+// Re-running refreshes prices and "was" prices of products already imported; --refresh-text also
+// rewrites their names, descriptions and stock display. Shoppers see the store as PUBLIC_NAME:
+// the supplier's own name must not appear in anything shown on the storefront.
 //
 //   npx tsx scripts/import-alphadigital.ts            (add --dry-run to only print)
 import "dotenv/config";
@@ -17,6 +19,8 @@ const FEED = "https://www.alphadigital.pk/products.json?limit=250";
 const SOURCE = "alphadigital";
 const STORE_NAME = "Alpha Digital";
 const STORE_EMAIL = "alphadigital-store@marketplace.internal";
+const PUBLIC_NAME = "Unique Store";
+const REFRESH_TEXT = process.argv.includes("--refresh-text");
 const STOCK = 10;
 const MAX_IMAGES = 8;
 const DRY = process.argv.includes("--dry-run");
@@ -34,7 +38,7 @@ type ShopifyProduct = {
   vendor: string;
   product_type: string;
   tags: string[];
-  variants: { price: string; sku: string | null; available: boolean }[];
+  variants: { price: string; compare_at_price: string | null; sku: string | null; available: boolean }[];
   images: { src: string }[];
 };
 
@@ -54,7 +58,7 @@ function kindOf(p: ShopifyProduct): Kind {
 const UPPER = new Set(["aov", "pt", "vt", "sc", "en"]);
 /** "IMOU Cruiser Sc 4G (3K) 5MP" → model "Cruiser SC 4G", resolution "3K, 5MP". */
 function parseTitle(p: ShopifyProduct) {
-  const brand = p.vendor === "Alpha digital" ? "Alpha Digital" : p.vendor.toUpperCase();
+  const brand = p.vendor.toUpperCase();
   const res = p.title.match(/\(([^)]+)\)\s*(\d+MP)?/);
   const resolution = res ? [res[1], res[2]].filter(Boolean).join(", ") : null;
   const model = p.title
@@ -70,7 +74,7 @@ function parseTitle(p: ShopifyProduct) {
 
 const APP: Record<string, string> = { IMOU: "Imou Life", EZVIZ: "EZVIZ" };
 const DELIVERY =
-  "Sold by Alpha Digital on DukanWalley. Free delivery to Punjab, KPK, Sindh and Islamabad, usually within 3 working days, with cash on delivery.";
+  `Sold by ${PUBLIC_NAME} on DukanWalley. Free delivery to Punjab, KPK, Sindh and Islamabad, usually within 3 working days, with cash on delivery.`;
 
 function resolutionNote(resolution: string) {
   if (/\+/.test(resolution)) return `two lenses (${resolution}), so one camera covers two views at once`;
@@ -130,12 +134,22 @@ function write(p: ShopifyProduct, kind: Kind) {
     facts.push(["Type", "Video Door Phone"]);
   } else {
     const size = p.title.match(/(\d+)\s*GB/i)?.[1];
-    name = `Alpha Digital SD Memory Card ${size} GB`;
+    // The supplier lists these under its own name; the photos show SanDisk Extreme PRO cards.
+    name = `SanDisk Extreme PRO ${size} GB SDXC Memory Card`;
     lines.push(
-      `A ${size} GB SD memory card from Alpha Digital for storing photos, videos and recordings.`,
-      "Useful as extra storage for cameras, including security cameras that record to a memory card. Check that your device supports SD cards of this size before you buy.",
+      `A ${size} GB SanDisk Extreme PRO SD card (full-size SDXC, UHS-I) with read speeds of up to 200 MB/s.`,
+      "Its V30 and U3 speed ratings make it a good match for cameras recording 4K video, as well as for burst photos and security cameras that record to an SD card.",
+      "This is a full-size SD card, not microSD. Check that your device takes SDXC cards before you buy.",
     );
-    facts.splice(1, 1, ["Capacity", `${size} GB`]);
+    facts.splice(
+      0,
+      2,
+      ["Brand", "SanDisk"],
+      ["Model", "Extreme PRO SDXC UHS-I"],
+      ["Capacity", `${size} GB`],
+      ["Read speed", "Up to 200 MB/s"],
+      ["Speed class", "V30, U3, Class 10"],
+    );
   }
 
   const description = [lines.join("\n\n"), facts.map(([k, v]) => `${k}: ${v}`).join("\n"), DELIVERY].join("\n\n");
@@ -158,6 +172,12 @@ async function fetchAll(): Promise<ShopifyProduct[]> {
 
 async function ensureStore() {
   const existing = await prisma.vendorProfile.findFirst({ where: { user: { email: STORE_EMAIL } } });
+  if (existing && !existing.displayName && !DRY) {
+    return prisma.vendorProfile.update({
+      where: { id: existing.id },
+      data: { displayName: PUBLIC_NAME, slug: await uniqueVendorSlug(PUBLIC_NAME) },
+    });
+  }
   if (existing || DRY) return existing;
   const user = await prisma.user.create({
     data: {
@@ -167,7 +187,8 @@ async function ensureStore() {
       vendorProfile: {
         create: {
           storeName: STORE_NAME,
-          slug: await uniqueVendorSlug(STORE_NAME),
+          displayName: PUBLIC_NAME,
+          slug: await uniqueVendorSlug(PUBLIC_NAME),
           phone: "-",
           addressLine1: "-",
           market: "PK",
@@ -212,12 +233,29 @@ async function main() {
   for (const p of feed) {
     const { name, description, categorySlug } = write(p, kindOf(p));
     const price = Math.round(Number(p.variants[0].price));
+    const was = Math.round(Number(p.variants[0].compare_at_price));
+    const compareAtPrice = was > price ? new Prisma.Decimal(was) : null;
     const existing = await prisma.product.findUnique({ where: { source_sourceRef: { source: SOURCE, sourceRef: p.handle } } });
     if (existing) {
-      if (Number(existing.basePrice) !== price && !DRY) {
-        await prisma.product.update({ where: { id: existing.id }, data: { basePrice: new Prisma.Decimal(price) } });
+      if (!DRY) {
+        await prisma.product.update({
+          where: { id: existing.id },
+          data: {
+            basePrice: new Prisma.Decimal(price),
+            compareAtPrice,
+            ...(REFRESH_TEXT
+              ? {
+                  name,
+                  description,
+                  showStockCount: false,
+                  // Old slugs carried the supplier's name.
+                  ...(/alpha/i.test(existing.slug) ? { slug: `${slugify(name)}-${randomBytes(3).toString("hex")}` } : {}),
+                }
+              : {}),
+          },
+        });
       }
-      console.log(`updated ${name}: Rs ${existing.basePrice} → ${price}`);
+      console.log(`updated ${name}: Rs ${existing.basePrice} → ${price}${compareAtPrice ? ` (was ${was})` : ""}`);
       continue;
     }
     const sources = p.images.slice(0, MAX_IMAGES).map((i) => i.src);
@@ -245,7 +283,9 @@ async function main() {
         name,
         description,
         basePrice: new Prisma.Decimal(price),
+        compareAtPrice,
         stock: p.variants.some((v) => v.available) ? STOCK : 0,
+        showStockCount: false,
         sku: p.variants[0].sku || null,
         categoryId: category.id,
         vendorId: store!.id,

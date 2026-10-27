@@ -14,7 +14,7 @@ import {
   variantsInputSchema,
 } from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
-import { isValidPrice, priceRuleMessage, taxRuleError } from "@/lib/markets";
+import { compareAtPriceError, isValidPrice, priceRuleMessage, taxRuleError } from "@/lib/markets";
 import { ProductApprovalStatus } from "@/generated/prisma/enums";
 import { randomBytes } from "crypto";
 
@@ -30,6 +30,8 @@ const createSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
   basePrice: z.number().positive(),
+  compareAtPrice: z.number().positive().nullable().optional(),
+  showStockCount: z.boolean().optional(),
   salesTaxBps: z.number().int().min(0).max(10000).optional(),
   stock: z.number().int().min(0).optional(),
   categoryId: z.string(),
@@ -50,6 +52,8 @@ const patchSchema = z.object({
   name: z.string().min(2).optional(),
   description: z.string().optional(),
   basePrice: z.number().positive().optional(),
+  compareAtPrice: z.number().positive().nullable().optional(),
+  showStockCount: z.boolean().optional(),
   salesTaxBps: z.number().int().min(0).max(10000).optional(),
   stock: z.number().int().min(0).optional(),
   categoryId: z.string().optional(),
@@ -123,6 +127,8 @@ export async function POST(req: Request) {
   if (!vendor) return badRequest("Vendor cannot receive listings");
   if (!isValidPrice(vendor.market, d.basePrice))
     return badRequest(priceRuleMessage(vendor.market));
+  const compareError = compareAtPriceError(vendor.market, d.compareAtPrice, d.basePrice);
+  if (compareError) return badRequest(compareError);
   const taxError = taxRuleError(vendor.market, vendor.taxRegNo, d.salesTaxBps);
   if (taxError) return badRequest(taxError);
   const attrs = await validateAttributes(d.categoryId, d.metadata);
@@ -143,8 +149,10 @@ export async function POST(req: Request) {
         name: d.name,
         description: d.description,
         basePrice: d.basePrice,
+        compareAtPrice: d.compareAtPrice ?? null,
         salesTaxBps: d.salesTaxBps ?? 0,
         stock: d.stock ?? 0,
+        showStockCount: d.showStockCount ?? true,
         categoryId: d.categoryId,
         vendorId: d.vendorId,
         salesPersonId: profile.id,
@@ -212,6 +220,12 @@ export async function PATCH(req: Request) {
   ) {
     return badRequest(priceRuleMessage(existing.vendor.market));
   }
+  const compareError = compareAtPriceError(
+    existing.vendor.market,
+    d.compareAtPrice === undefined ? (existing.compareAtPrice === null ? null : Number(existing.compareAtPrice)) : d.compareAtPrice,
+    d.basePrice ?? Number(existing.basePrice),
+  );
+  if (compareError) return badRequest(compareError);
   const taxError = taxRuleError(
     existing.vendor.market,
     existing.vendor.taxRegNo,
@@ -267,6 +281,8 @@ export async function PATCH(req: Request) {
         name: d.name,
         description: d.description,
         basePrice: d.basePrice,
+        compareAtPrice: d.compareAtPrice,
+        showStockCount: d.showStockCount,
         salesTaxBps: d.salesTaxBps,
         // With variants, stock is their total (set by syncProductVariants).
         stock: variants?.ok && variants.variants.length ? undefined : d.stock,

@@ -12,7 +12,8 @@ import { inheritedAttributeDefs, sellableVendorWhere, storefrontProductWhere } f
 import { getCurrentMarket } from "@/lib/market-session";
 import { formatMoney, MARKETS } from "@/lib/markets";
 import { absoluteUrl, breadcrumbJsonLd, inMarket, marketPlace, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
-import { storeHref } from "@/lib/vendor-slug";
+import { publicStoreName, storeHref } from "@/lib/vendor-slug";
+import { WasPrice } from "@/components/was-price";
 import { AddToCart, type PickerAxis } from "./add-to-cart";
 import { ProductViewTracker } from "./product-detail-client";
 import { ProductGallery } from "./product-gallery";
@@ -60,7 +61,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Shoppers search "<product> price in Pakistan", so the title and description lead with that.
   const title = `${product.name} Price in ${marketPlace(market)}`;
   const description = metaDescription(
-    `${product.name} price ${inMarket(market)}: ${formatMoney(market, min)} from ${product.vendor.storeName} on ${SITE_NAME}.` +
+    `${product.name} price ${inMarket(market)}: ${formatMoney(market, min)} from ${publicStoreName(product.vendor)} on ${SITE_NAME}.` +
       (product.description?.trim() ? ` ${product.description.trim()}` : ""),
   );
   const path = `/products/${product.slug}`;
@@ -127,7 +128,7 @@ export default async function ProductPage({ params }: Props) {
   const m = MARKETS[productMarket];
   const money = (n: number) => n.toFixed(m.fractionDigits);
   const availability = product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
-  const seller = { "@type": "Organization", name: product.vendor.storeName };
+  const seller = { "@type": "Organization", name: publicStoreName(product.vendor) };
   const productLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -208,11 +209,14 @@ export default async function ProductPage({ params }: Props) {
                   {minPrice === maxPrice
                     ? formatMoney(productMarket, minPrice)
                     : `${formatMoney(productMarket, minPrice)} – ${formatMoney(productMarket, maxPrice)}`}
+                  {minPrice === maxPrice ? (
+                    <WasPrice market={productMarket} price={minPrice} compareAt={product.compareAtPrice} className="ml-2 text-base" />
+                  ) : null}
                 </p>
                 <p className="text-sm text-zinc-500">
                   Sold by{" "}
                   <Link href={storeHref(product.vendor)} className="font-medium text-zinc-700 hover:text-teal-700">
-                    {product.vendor.storeName}
+                    {publicStoreName(product.vendor)}
                   </Link>{" "}
                   ·{" "}
                   {product.category.parent ? (
@@ -263,6 +267,7 @@ export default async function ProductPage({ params }: Props) {
                     disabled={product.stock <= 0}
                     market={productMarket}
                     basePrice={Number(product.basePrice)}
+                    showStockCount={product.showStockCount}
                     axes={axes}
                     variants={variants}
                   />
@@ -275,7 +280,7 @@ export default async function ProductPage({ params }: Props) {
                   <p className="mt-2 text-sm text-red-600">Out of stock</p>
                 ) : variants.length ? null : (
                   <p className="mt-2 text-sm text-zinc-500">
-                    {product.stock} in stock
+                    {product.showStockCount ? `${product.stock} in stock` : "In stock"}
                   </p>
                 )}
               </div>

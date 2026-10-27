@@ -74,6 +74,7 @@ export default async function AdminVendorPage({ params }: Props) {
         <div>
           <Link href="/admin/vendors" className="text-sm text-teal-700 hover:underline">← Vendors</Link>
           <h1 className="text-2xl font-semibold">{vendor.storeName}</h1>
+          {vendor.displayName ? <p className="text-sm text-teal-800">Shown to shoppers as “{vendor.displayName}”</p> : null}
           <p className="text-sm text-zinc-600">
             {vendor.user.name} · {vendor.user.email} · {vendor.phone} · {m.name}
           </p>
@@ -106,11 +107,12 @@ export default async function AdminVendorPage({ params }: Props) {
       </div>
 
       <VendorControls
-        vendor={vendor}
+        vendor={{ ...vendor, loginEmail: vendor.user.email }}
         labels={m.idLabels}
         canManage={can(role, "vendors:manage")}
         canRestrict={can(role, "vendors:restrict")}
         canCommission={can(role, "vendors:commission")}
+        canLogin={can(role, "vendors:login")}
       />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-4 text-sm">

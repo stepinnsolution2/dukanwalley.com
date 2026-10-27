@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sellableVendorWhere, withInheritedAttributes } from "@/lib/catalog";
+import { publicVendor } from "@/lib/vendor-slug";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -17,11 +18,12 @@ export async function GET(_req: Request, { params }: Params) {
       images: { orderBy: { sortOrder: "asc" } },
       videos: { orderBy: { sortOrder: "asc" } },
       category: { include: { attributeDefs: true } },
-      vendor: { select: { id: true, storeName: true, logoUrl: true, market: true } },
+      vendor: { select: { id: true, storeName: true, displayName: true, logoUrl: true, market: true } },
     },
   });
   if (!product) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json({ product: (await withInheritedAttributes([product]))[0] });
+  const [full] = await withInheritedAttributes([product]);
+  return NextResponse.json({ product: { ...full, vendor: publicVendor(product.vendor) } });
 }

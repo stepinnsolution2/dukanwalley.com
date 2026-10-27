@@ -15,7 +15,7 @@ import { getCurrentMarket } from "@/lib/market-session";
 import type { MarketCode } from "@/lib/markets";
 import { PAGE_WIDE } from "@/lib/page-layout";
 import { absoluteUrl, BUSINESS, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
-import { storeHref } from "@/lib/vendor-slug";
+import { publicStoreName, storeHref } from "@/lib/vendor-slug";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +85,7 @@ export default async function HomePage() {
     prisma.product.findMany({ where: { ...live, isPopular: true }, include: image, orderBy: [...rowOrder], take: 16 }),
     prisma.vendorProfile.findMany({
       where: { ...sellableVendorWhere, market, isTopSeller: true, products: { some: live } },
-      select: { id: true, slug: true, storeName: true, logoUrl: true },
+      select: { id: true, slug: true, storeName: true, displayName: true, logoUrl: true },
       orderBy: { storeName: "asc" },
       take: 16,
     }),
@@ -126,8 +126,8 @@ export default async function HomePage() {
               {topSellers.map((s) => (
                 <li key={s.id} className="w-24 shrink-0">
                   <Link href={storeHref(s)} className="flex flex-col items-center gap-1.5 text-center hover:text-teal-700">
-                    <SellerAvatar name={s.storeName} logoUrl={s.logoUrl} size={80} />
-                    <span className="line-clamp-2 text-xs font-medium">{s.storeName}</span>
+                    <SellerAvatar name={publicStoreName(s)} logoUrl={s.logoUrl} size={80} />
+                    <span className="line-clamp-2 text-xs font-medium">{publicStoreName(s)}</span>
                   </Link>
                 </li>
               ))}

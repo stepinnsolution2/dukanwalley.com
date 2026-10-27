@@ -22,8 +22,10 @@ export type ProductFormInitial = {
   name: string;
   description: string | null;
   basePrice: string | number;
+  compareAtPrice?: string | number | null;
   salesTaxBps: number;
   stock: number;
+  showStockCount?: boolean;
   categoryId: string;
   vendorId: string;
   metadata: Record<string, unknown> | null;
@@ -82,6 +84,8 @@ export function ProductForm({
     name: initial?.name ?? "",
     description: initial?.description ?? "",
     basePrice: initial ? String(Number(initial.basePrice)) : "",
+    compareAtPrice: initial?.compareAtPrice != null ? String(Number(initial.compareAtPrice)) : "",
+    showStockCount: initial?.showStockCount ?? true,
     taxPercent: initial ? String(initial.salesTaxBps / 100) : "0",
     stock: initial ? String(initial.stock) : "10",
     categoryId: initial?.categoryId ?? "",
@@ -174,6 +178,8 @@ export function ProductForm({
       name: f.name.trim(),
       description: f.description,
       basePrice: Number(f.basePrice),
+      compareAtPrice: f.compareAtPrice.trim() ? Number(f.compareAtPrice) : null,
+      showStockCount: f.showStockCount,
       salesTaxBps: taxRegistered ? Math.round(Number(f.taxPercent) * 100) : 0,
       stock: hasVariants ? variantStock : Math.trunc(Number(f.stock)),
       categoryId: f.categoryId,
@@ -271,6 +277,30 @@ export function ProductForm({
             required
           />
         </label>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className={label}>
+          Compare-at (“was”) price{m ? ` (${m.currency})` : ""} <span className="font-normal text-zinc-500">optional</span>
+          <input
+            className={input}
+            inputMode="decimal"
+            value={f.compareAtPrice}
+            onChange={set("compareAtPrice")}
+            placeholder="e.g. 14999"
+          />
+          <span className="mt-1 block font-normal text-zinc-500">Shown crossed out next to the price. Must be higher than the price.</span>
+        </label>
+        <fieldset className={label}>
+          Stock shown to shoppers
+          <label className="mt-2 flex items-center gap-2 font-normal text-zinc-700">
+            <input type="radio" checked={f.showStockCount} onChange={() => setF((s) => ({ ...s, showStockCount: true }))} />
+            Quantity (e.g. “8 in stock”, “Only 3 left”)
+          </label>
+          <label className="mt-1 flex items-center gap-2 font-normal text-zinc-700">
+            <input type="radio" checked={!f.showStockCount} onChange={() => setF((s) => ({ ...s, showStockCount: false }))} />
+            Only “In stock”
+          </label>
+        </fieldset>
       </div>
       <p className="-mt-2 text-xs text-zinc-500">
         {m && !taxRegistered

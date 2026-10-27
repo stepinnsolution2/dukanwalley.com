@@ -15,6 +15,7 @@ export function AddToCart({
   disabled,
   market,
   basePrice,
+  showStockCount = true,
   axes = [],
   variants = [],
 }: {
@@ -22,6 +23,8 @@ export function AddToCart({
   disabled?: boolean;
   market: MarketCode;
   basePrice: number;
+  /** false: say "In stock" instead of how many are left. */
+  showStockCount?: boolean;
   axes?: PickerAxis[];
   variants?: PickerVariant[];
 }) {
@@ -132,7 +135,7 @@ export function AddToCart({
           ) : null}
           {variant.stock <= 0 ? (
             <span className="text-red-600">Sold out</span>
-          ) : variant.stock <= 5 ? (
+          ) : showStockCount && variant.stock <= 5 ? (
             <span className="text-amber-700">Only {variant.stock} left</span>
           ) : (
             <span className="text-zinc-600">In stock</span>

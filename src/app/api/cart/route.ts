@@ -10,6 +10,7 @@ import { toCents } from "@/lib/money";
 import { pointsForAmount } from "@/lib/reward-rules";
 import { getEarnBps, getPointsBalance } from "@/lib/rewards";
 import { variantLabel, type VariantOptions } from "@/lib/variants";
+import { publicVendor } from "@/lib/vendor-slug";
 
 const MAX_QTY = 99;
 
@@ -20,7 +21,7 @@ const cartInclude = {
         include: {
           images: true,
           // Public response: never expose KYC notes, commission or contact details.
-          vendor: { select: { id: true, storeName: true, market: true } },
+          vendor: { select: { id: true, storeName: true, displayName: true, market: true } },
         },
       },
       variant: true,
@@ -69,6 +70,7 @@ async function cartResponse(cart: LoadedCart) {
   const namesFor = await attributeNameLookup();
   const items = cart.items.map((i) => ({
     ...i,
+    product: { ...i.product, vendor: publicVendor(i.product.vendor) },
     unitPrice: Number(i.variant?.price ?? i.product.basePrice),
     variantLabel: i.variant
       ? variantLabel(
@@ -92,9 +94,12 @@ async function cartResponse(cart: LoadedCart) {
   });
 }
 
-function stockError(name: string, stock: number) {
+function stockError(name: string, stock: number, showCount = true) {
   return NextResponse.json(
-    { error: stock > 0 ? `Only ${stock} of ${name} left` : `${name} is out of stock` },
+    {
+      error:
+        stock <= 0 ? `${name} is out of stock` : showCount ? `Only ${stock} of ${name} left` : `Not enough ${name} in stock`,
+    },
     { status: 400 },
   );
 }
@@ -144,7 +149,7 @@ export async function POST(req: Request) {
   }
   const existing = cart.items.find((i) => i.productId === productId && i.variantKey === variantKey);
   const newQty = (existing?.quantity ?? 0) + quantity;
-  if (newQty > available) return stockError(product.name, available);
+  if (newQty > available) return stockError(product.name, available, product.showStockCount);
   if (newQty > MAX_QTY) {
     return NextResponse.json({ error: `Maximum ${MAX_QTY} per item` }, { status: 400 });
   }
@@ -182,7 +187,7 @@ export async function PATCH(req: Request) {
     // Reducing is always allowed, so shoppers can get back under the available stock.
     const available = item.variant ? item.variant.stock : item.product.stock;
     if (quantity > item.quantity && quantity > available) {
-      return stockError(item.product.name, available);
+      return stockError(item.product.name, available, item.product.showStockCount);
     }
     await prisma.cartItem.update({ where: { id: itemId }, data: { quantity } });
   }

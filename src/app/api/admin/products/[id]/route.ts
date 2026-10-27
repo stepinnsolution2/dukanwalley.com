@@ -12,13 +12,15 @@ import {
   validateVariants,
   variantsInputSchema,
 } from "@/lib/catalog";
-import { isValidPrice, priceRuleMessage, taxRuleError } from "@/lib/markets";
+import { compareAtPriceError, isValidPrice, priceRuleMessage, taxRuleError } from "@/lib/markets";
 import { Prisma } from "@/generated/prisma/client";
 
 const patchSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   basePrice: z.number().positive().optional(),
+  compareAtPrice: z.number().positive().nullable().optional(),
+  showStockCount: z.boolean().optional(),
   salesTaxBps: z.number().int().min(0).max(10000).optional(),
   stock: z.number().int().min(0).optional(),
   categoryId: z.string().optional(),
@@ -127,6 +129,12 @@ export async function PATCH(req: Request, { params }: Params) {
       { status: 400 },
     );
   }
+  const compareError = compareAtPriceError(
+    market,
+    d.compareAtPrice === undefined ? (existing.compareAtPrice === null ? null : Number(existing.compareAtPrice)) : d.compareAtPrice,
+    d.basePrice ?? Number(existing.basePrice),
+  );
+  if (compareError) return NextResponse.json({ error: compareError }, { status: 400 });
   if ((d.isHot || d.isPopular) && existing.approvalStatus !== "APPROVED") {
     return NextResponse.json(
       { error: "Only approved products can be marked Trending or Most Popular" },
@@ -193,6 +201,9 @@ export async function PATCH(req: Request, { params }: Params) {
     if (d.description !== undefined) data.description = d.description;
     if (d.basePrice !== undefined)
       data.basePrice = new Prisma.Decimal(d.basePrice.toFixed(2));
+    if (d.compareAtPrice !== undefined)
+      data.compareAtPrice = d.compareAtPrice === null ? null : new Prisma.Decimal(d.compareAtPrice.toFixed(2));
+    if (d.showStockCount !== undefined) data.showStockCount = d.showStockCount;
     if (d.salesTaxBps !== undefined) data.salesTaxBps = d.salesTaxBps;
     // With variants, stock is their total (set by syncProductVariants).
     if (d.stock !== undefined && !(variants?.ok && variants.variants.length))

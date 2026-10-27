@@ -1,6 +1,6 @@
 // Imports a Markaz product export into the house store, as "Pending review" listings.
 //
-//   npx tsx scripts/import-markaz.ts <export.xlsx> [--dry-run] [--stock 50] [--store "Marketplace Store"]
+//   npx tsx scripts/import-markaz.ts <export.xlsx> [--dry-run] [--stock 50] [--hide-stock] [--store "Marketplace Store"]
 //
 // Safe to re-run with a newer export: already-imported products only get their prices refreshed.
 import "dotenv/config";
@@ -31,6 +31,8 @@ async function main() {
   if (!file || file.startsWith("--")) throw new Error("Usage: npx tsx scripts/import-markaz.ts <export.xlsx> [--dry-run] [--stock 50]");
   if (!/\.xlsx$/i.test(file)) throw new Error("Export the products from Markaz as Excel (.xlsx)");
   const dryRun = process.argv.includes("--dry-run");
+  // --hide-stock: shoppers see only "In stock", not the quantity.
+  const showStockCount = !process.argv.includes("--hide-stock");
   const stockPerItem = Number(arg("--stock") ?? 50);
   if (!Number.isInteger(stockPerItem) || stockPerItem < 0) throw new Error("--stock must be a whole number");
 
@@ -44,7 +46,7 @@ async function main() {
     ? ((await prisma.vendorProfile.findFirst({ where: { user: { email: "house-store@marketplace.internal" } } })) ?? { id: "dry-run" })
     : await ensureHouseStore(arg("--store") ?? "Marketplace Store");
 
-  const results = await importMarkazProducts(products, { vendorId: store.id, stockPerItem, dryRun, log: console.log });
+  const results = await importMarkazProducts(products, { vendorId: store.id, stockPerItem, showStockCount, dryRun, log: console.log });
   const count = (a: string) => results.filter((r) => r.action === a).length;
   console.log(`\n${count("created")} created, ${count("updated")} updated, ${count("skipped")} skipped.`);
   if (!dryRun && count("created")) console.log("New products are in Admin → Products → Pending review.");

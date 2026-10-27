@@ -27,6 +27,7 @@ export async function createPreviewJob(input: {
   bytes: Buffer;
   vendorId: string;
   stockPerItem: number;
+  showStockCount: boolean;
   userId: string;
 }) {
   let products: MarkazProduct[];
@@ -47,6 +48,7 @@ export async function createPreviewJob(input: {
       fileName: input.fileName,
       vendorId: input.vendorId,
       stockPerItem: input.stockPerItem,
+      showStockCount: input.showStockCount,
       createdById: input.userId,
       products: products as unknown as object,
       preview: preview as unknown as object,
@@ -104,6 +106,7 @@ export async function runImportJob(id: string) {
     await importMarkazProducts(job.products as unknown as MarkazProduct[], {
       vendorId: job.vendorId,
       stockPerItem: job.stockPerItem,
+      showStockCount: job.showStockCount,
       onResult: (r) => {
         results.push(r);
         tally[r.action]++;
