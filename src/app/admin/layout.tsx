@@ -15,6 +15,7 @@ const nav: { href: string; label: string; permission: Permission }[] = [
   { href: "/admin/sales-team", label: "Sales team", permission: "sales-team:manage" },
   { href: "/admin/live", label: "Live", permission: "live:view" },
   { href: "/admin/banners", label: "Banners", permission: "banners:manage" },
+  { href: "/admin/content", label: "Pages & blog", permission: "content:manage" },
   { href: "/admin/advertising", label: "Advertising", permission: "ads:manage" },
   { href: "/admin/settings", label: "Settings", permission: "settings:manage" },
 ];

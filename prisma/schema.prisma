@@ -745,3 +745,29 @@ model AdStat {
 
   @@unique([adBannerId, day])
 }
+
+/// Admin-written content: info pages (/about, /return-policy…) and blog posts (/blog/<slug>).
+model ContentPage {
+  id             String    @id @default(cuid())
+  /// "page" or "post"
+  kind           String
+  slug           String
+  title          String
+  /// Markdown (headings, lists, links, bold); raw HTML is not rendered.
+  body           String
+  excerpt        String?
+  coverImageUrl  String?
+  /// "draft" or "published"
+  status         String    @default("draft")
+  seoTitle       String?
+  seoDescription String?
+  /// Pages: listed in the footer's information links.
+  showInFooter   Boolean   @default(false)
+  footerOrder    Int       @default(0)
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([kind, slug])
+  @@index([kind, status, publishedAt])
+}

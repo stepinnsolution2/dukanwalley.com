@@ -28,6 +28,7 @@ const GRANTS = {
   "sales-team:manage": OWNER,
   "settings:manage": OWNER, // payment gateway and email credentials
   "banners:manage": OPERATIONS, // home page hero banners
+  "content:manage": OPERATIONS, // info pages (About, policies) and blog posts
   "ads:manage": OWNER, // paid advertising: companies, bookings, prices, reports
 } as const satisfies Record<string, readonly string[]>;
 

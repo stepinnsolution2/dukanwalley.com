@@ -4,6 +4,7 @@ import { NewsletterSignup } from "@/components/newsletter-signup";
 import { prisma } from "@/lib/db";
 import { categoryAndDescendantIds, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
+import { footerPages } from "@/lib/content";
 import { SITE_NAME } from "@/lib/seo";
 
 /** Top-level categories that have something to buy in this market (directly or in a subcategory). */
@@ -19,7 +20,7 @@ async function shopCategories() {
 }
 
 export async function SiteFooter() {
-  const categories = await shopCategories();
+  const [categories, pages] = await Promise.all([shopCategories(), footerPages()]);
   return (
     <footer className="mt-auto border-t border-zinc-200 bg-white">
       <AdSlot placement="footer" className="mx-auto max-w-[1600px] px-3 pt-6 sm:px-4" />
@@ -49,9 +50,20 @@ export async function SiteFooter() {
         {" · "}
         <Link href="/sellers" className="hover:underline">Sellers</Link>
         {" · "}
+        <Link href="/blog" className="hover:underline">Guides</Link>
+        {" · "}
         <Link href="/orders/track" className="hover:underline">Track an order</Link>
         {" · "}
         <Link href="/vendor/register" className="hover:underline">Sell with us</Link>
+        {pages.length ? (
+          <p className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 px-3">
+            {pages.map((p) => (
+              <Link key={p.slug} href={`/${p.slug}`} className="hover:underline">
+                {p.title}
+              </Link>
+            ))}
+          </p>
+        ) : null}
         <p className="mt-2 text-xs text-zinc-400">© {new Date().getFullYear()} {SITE_NAME}</p>
       </div>
     </footer>

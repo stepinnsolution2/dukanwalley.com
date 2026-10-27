@@ -13,7 +13,7 @@ export type IntegrationField = {
 };
 
 export type IntegrationGroup = {
-  id: "jazzcash" | "easypaisa" | "cards" | "email";
+  id: "jazzcash" | "easypaisa" | "cards" | "email" | "analytics";
   title: string;
   description: string;
   fields: readonly IntegrationField[];
@@ -93,6 +93,22 @@ export const INTEGRATION_GROUPS: readonly IntegrationGroup[] = [
       { key: "EMAIL_FROM", label: "From", placeholder: "DukanWalley <noreply@dukanwalley.com>" },
     ],
     required: ["SMTP_HOST"],
+  },
+  {
+    id: "analytics",
+    title: "Analytics & search engines",
+    description: "Google Analytics shows visitors and where they come from; the verification codes prove to Google and Bing that you own the site.",
+    fields: [
+      { key: "GA_MEASUREMENT_ID", label: "Google Analytics 4 measurement ID", placeholder: "G-XXXXXXXXXX", help: "Google Analytics › Admin › Data streams › your web stream." },
+      {
+        key: "GOOGLE_SITE_VERIFICATION",
+        label: "Google Search Console verification",
+        placeholder: "paste the HTML tag or just its code",
+        help: "Search Console › Add property › URL prefix https://dukanwalley.com › HTML tag.",
+      },
+      { key: "BING_SITE_VERIFICATION", label: "Bing Webmaster verification", placeholder: "paste the meta tag or its code" },
+    ],
+    required: [],
   },
 ];
 

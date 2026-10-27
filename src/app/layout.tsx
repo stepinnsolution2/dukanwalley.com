@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { Providers } from "@/components/providers";
+import { integrationSettings } from "@/lib/integration-settings";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
@@ -14,7 +16,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
   description: `${SITE_NAME} — ${SITE_TAGLINE.toLowerCase()}.`,
@@ -28,11 +30,25 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-export default function RootLayout({
+/** Site-wide metadata plus the Google / Bing ownership codes saved in Admin › Settings. */
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await integrationSettings();
+  return {
+    ...baseMetadata,
+    verification: {
+      ...(s.GOOGLE_SITE_VERIFICATION ? { google: s.GOOGLE_SITE_VERIFICATION } : {}),
+      ...(s.BING_SITE_VERIFICATION ? { other: { "msvalidate.01": s.BING_SITE_VERIFICATION } } : {}),
+    },
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Google Analytics 4, when a measurement ID is saved in Admin › Settings (validated as G-XXXX).
+  const ga = (await integrationSettings()).GA_MEASUREMENT_ID;
   return (
     <html
       lang="en"
@@ -40,6 +56,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900">
         <Providers>{children}</Providers>
+        {ga ? (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${ga}`} strategy="afterInteractive" />
+            <Script id="ga4" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date());gtag("config","${ga}");`}
+            </Script>
+          </>
+        ) : null}
       </body>
     </html>
   );

@@ -91,6 +91,8 @@ export function validateIntegrationValue(key: string, value: string): string | n
   if (key === "EASYPAISA_HASH_KEY" && ![16, 24, 32].includes(Buffer.byteLength(value, "utf8"))) {
     return "Easypaisa hash key must be 16, 24 or 32 characters";
   }
+  if (key === "GA_MEASUREMENT_ID" && !/^G-[A-Z0-9]{4,20}$/.test(value)) return "Looks like G-XXXXXXXXXX";
+  if (/_SITE_VERIFICATION$/.test(key) && !/^[A-Za-z0-9_-]{10,120}$/.test(value)) return "Paste the code from the verification tag";
   if (key === "SMTP_PORT" && !/^\d{2,5}$/.test(value)) return "Port must be a number, e.g. 465 or 587";
   if (key === "JAZZCASH_INQUIRY_URL" && !/^https:\/\/\S+$/.test(value)) return "Must be an https:// URL";
   if (value.length > 500) return "Too long";
@@ -109,7 +111,10 @@ export async function saveIntegrationSettings(changes: Record<string, string | n
     if (!INTEGRATION_KEYS.includes(key)) throw new SettingsValidationError(key, `Unknown setting ${key}`);
     const secret = SECRET_KEYS.has(key);
     const bucket = secret ? stored.secrets : stored.values;
-    const value = raw?.trim() ?? null;
+    let value = raw?.trim() ?? null;
+    // A pasted <meta … content="CODE"> tag: keep just the code.
+    if (value && /_SITE_VERIFICATION$/.test(key)) value = value.match(/content=["']([^"']+)["']/)?.[1] ?? value;
+    if (value && key === "GA_MEASUREMENT_ID") value = value.toUpperCase();
     if (value === null || (value === "" && !secret)) {
       if (key in bucket) {
         delete bucket[key];
