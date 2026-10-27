@@ -264,3 +264,13 @@ export async function withInheritedAttributes<T extends { categoryId: string; ca
     category: { ...p.category, attributeDefs: mergeInheritedAttributes(p.categoryId, byId) },
   }));
 }
+
+/** Internal product fields never sent to shoppers (supplier source, staff, pricing rules). */
+export const publicProductOmit = {
+  source: true,
+  sourceRef: true,
+  salesPersonId: true,
+  approvedById: true,
+  rejectionReason: true,
+  dynamicPriceRule: true,
+} as const;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sellableVendorWhere, withInheritedAttributes } from "@/lib/catalog";
+import { publicProductOmit, sellableVendorWhere, withInheritedAttributes } from "@/lib/catalog";
 import { publicVendor } from "@/lib/vendor-slug";
 
 type Params = { params: Promise<{ slug: string }> };
@@ -14,6 +14,7 @@ export async function GET(_req: Request, { params }: Params) {
       displayOnStorefront: true,
       vendor: sellableVendorWhere,
     },
+    omit: publicProductOmit,
     include: {
       images: { orderBy: { sortOrder: "asc" } },
       videos: { orderBy: { sortOrder: "asc" } },

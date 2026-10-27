@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { storefrontProductWhere } from "@/lib/catalog";
+import { publicProductOmit, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
 import { isMarketCode, MARKETS } from "@/lib/markets";
 import { publicVendor } from "@/lib/vendor-slug";
@@ -25,6 +25,7 @@ export async function GET(req: Request) {
         : {}),
       ...(zone ? { zoneTags: { has: zone } } : {}),
     },
+    omit: publicProductOmit,
     include: {
       images: { orderBy: { sortOrder: "asc" } },
       category: true,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { attributeNameLookup, sellableVendorWhere } from "@/lib/catalog";
+import { attributeNameLookup, publicProductOmit, sellableVendorWhere } from "@/lib/catalog";
 import { getOrCreateCartOwner } from "@/lib/cart-session";
 import { getCurrentMarket } from "@/lib/market-session";
 import { MARKETS } from "@/lib/markets";
@@ -18,6 +18,7 @@ const cartInclude = {
   items: {
     include: {
       product: {
+        omit: publicProductOmit,
         include: {
           images: true,
           // Public response: never expose KYC notes, commission or contact details.
