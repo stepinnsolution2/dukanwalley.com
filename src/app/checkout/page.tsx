@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  deliveryRegions,
   DEFAULT_MARKET,
   formatMoney,
   MARKETS,
@@ -192,7 +193,7 @@ export default function CheckoutPage() {
           required
         >
           <option value="">{m.regionLabel}…</option>
-          {m.regions.map((r) => (
+          {deliveryRegions(m).map((r) => (
             <option key={r} value={r}>
               {r}
             </option>

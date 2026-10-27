@@ -14,7 +14,7 @@ import { sellableVendorWhere, storefrontProductWhere } from "@/lib/catalog";
 import { getCurrentMarket } from "@/lib/market-session";
 import type { MarketCode } from "@/lib/markets";
 import { PAGE_WIDE } from "@/lib/page-layout";
-import { absoluteUrl, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
+import { absoluteUrl, BUSINESS, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import { storeHref } from "@/lib/vendor-slug";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,30 @@ const siteJsonLd = [
     name: SITE_NAME,
     url: SITE_URL,
     logo: absoluteUrl("/logo.png"),
+    legalName: BUSINESS.legalName,
+    email: BUSINESS.email,
+    telephone: BUSINESS.phone,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: `${BUSINESS.streetAddress}, ${BUSINESS.locality}`,
+      addressLocality: BUSINESS.city,
+      addressRegion: BUSINESS.region,
+      addressCountry: BUSINESS.country,
+    },
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      telephone: BUSINESS.phone,
+      email: BUSINESS.email,
+      areaServed: "PK",
+      availableLanguage: ["en", "ur"],
+      hoursAvailable: {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        opens: "00:00",
+        closes: "23:59",
+      },
+    },
   },
   {
     "@context": "https://schema.org",

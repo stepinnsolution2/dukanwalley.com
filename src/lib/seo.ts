@@ -3,6 +3,20 @@
 export const SITE_NAME = "DukanWalley";
 export const SITE_TAGLINE = "Multiple Sellers, Endless Choices";
 
+/** Contact and address details shown on the trust pages and in Organization structured data. */
+export const BUSINESS = {
+  name: SITE_NAME,
+  legalName: "Dukan Walley",
+  phone: "+923261283292",
+  phoneDisplay: "+92 326 1283292",
+  email: "walleydukan@gmail.com",
+  streetAddress: "55-LG Ashiyana Center",
+  locality: "Gulberg",
+  city: "Lahore",
+  region: "Punjab",
+  country: "PK",
+} as const;
+
 /** Public origin used for canonical URLs, sitemap and structured data. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://dukanwalley.com").replace(/\/+$/, "");
 

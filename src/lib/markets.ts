@@ -20,6 +20,8 @@ export type MarketConfig = {
   fractionDigits: number;
   regionLabel: string;
   regions: readonly string[];
+  /** Where orders can be delivered (checkout); defaults to all regions. Sellers may be anywhere. */
+  deliveryRegions?: readonly string[];
   /** Local mobile numbers, validated after stripping spaces and dashes. */
   mobilePattern: RegExp;
   mobileExample: string;
@@ -49,6 +51,8 @@ export const MARKETS: Record<MarketCode, MarketConfig> = {
       "Gilgit-Baltistan",
       "Azad Jammu and Kashmir",
     ],
+    // Delivery currently covers these; see the shipping policy page.
+    deliveryRegions: ["Punjab", "Khyber Pakhtunkhwa", "Sindh", "Islamabad Capital Territory"],
     mobilePattern: /^(?:\+92|0092|0)3\d{9}$/,
     mobileExample: "03001234567",
     dialCode: "+92",
@@ -145,4 +149,9 @@ export function formatMoney(market: MarketCode, amount: number | string | { toSt
     minimumFractionDigits: m.fractionDigits,
     maximumFractionDigits: m.fractionDigits,
   }).format(Number(amount));
+}
+
+/** Regions an order can be delivered to in this market. */
+export function deliveryRegions(m: MarketConfig): readonly string[] {
+  return m.deliveryRegions ?? m.regions;
 }

@@ -7,7 +7,7 @@ import { attributeNameLookup, sellableVendorWhere } from "@/lib/catalog";
 import { logOrderEvent } from "@/lib/order-lifecycle";
 import { getCartOwner } from "@/lib/cart-session";
 import { resolveCommissionBps } from "@/lib/commission";
-import { MARKETS, normalizeMobile, type MarketPaymentMethod } from "@/lib/markets";
+import { deliveryRegions, MARKETS, normalizeMobile, type MarketPaymentMethod } from "@/lib/markets";
 import { fromCents, includedTaxCents, toCents } from "@/lib/money";
 import { cancelUnpaidOrder, requestCodConfirmation } from "@/lib/orders";
 import { appBaseUrl } from "@/lib/payments/common";
@@ -87,8 +87,9 @@ export async function POST(req: Request) {
   }
   const m = MARKETS[market];
   const namesFor = await attributeNameLookup();
-  if (!m.regions.includes(shippingAddress.region)) {
-    return badRequest(`Choose a valid ${m.regionLabel.toLowerCase()} in ${m.name}`);
+  const areas = deliveryRegions(m);
+  if (!areas.includes(shippingAddress.region)) {
+    return badRequest(`We currently deliver to ${areas.join(", ")}`);
   }
   const customerPhone = normalizeMobile(market, parsed.data.customerPhone);
   if (!customerPhone) {
