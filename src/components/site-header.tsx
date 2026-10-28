@@ -7,6 +7,7 @@ import { getCurrentMarket } from "@/lib/market-session";
 import { MARKET_CODES, MARKETS, type MarketCode } from "@/lib/markets";
 import { CONTAINER } from "@/lib/page-layout";
 import { isStaff } from "@/lib/permissions";
+import { TrustBar } from "@/components/trust-bar";
 
 function MarketSwitch({ market }: { market: MarketCode }) {
   return (
@@ -68,6 +69,7 @@ export async function SiteHeader() {
   return (
     <>
       <CartBackdrop />
+      {market === "PK" ? <TrustBar /> : null}
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-md">
         <div className={`${CONTAINER} flex items-center justify-between gap-3 py-1.5 md:py-2.5`}>
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="DukanWalley home">

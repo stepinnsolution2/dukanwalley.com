@@ -14,6 +14,7 @@ import { formatMoney, MARKETS } from "@/lib/markets";
 import { absoluteUrl, breadcrumbJsonLd, inMarket, marketPlace, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
 import { publicStoreName, storeHref } from "@/lib/vendor-slug";
 import { WasPrice } from "@/components/was-price";
+import { descriptionIntro, isRichDescription, markdownToPlain, ProductDetails } from "@/components/product-details";
 import { AddToCart, type PickerAxis } from "./add-to-cart";
 import { ProductViewTracker } from "./product-detail-client";
 import { ProductGallery } from "./product-gallery";
@@ -62,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${product.name} Price in ${marketPlace(market)}`;
   const description = metaDescription(
     `${product.name} price ${inMarket(market)}: ${formatMoney(market, min)} from ${publicStoreName(product.vendor)} on ${SITE_NAME}.` +
-      (product.description?.trim() ? ` ${product.description.trim()}` : ""),
+      (product.description?.trim() ? ` ${markdownToPlain(product.description)}` : ""),
   );
   const path = `/products/${product.slug}`;
   const images = product.images.slice(0, 4).map((i) => ({ url: absoluteUrl(i.url), alt: product.name }));
@@ -134,7 +135,7 @@ export default async function ProductPage({ params }: Props) {
     "@type": "Product",
     name: product.name,
     url: absoluteUrl(path),
-    ...(product.description ? { description: product.description } : {}),
+    ...(product.description ? { description: markdownToPlain(product.description) } : {}),
     ...(product.images.length ? { image: product.images.map((i) => absoluteUrl(i.url)) } : {}),
     ...(product.sku ? { sku: product.sku } : {}),
     category: product.category.parent
@@ -238,7 +239,14 @@ export default async function ProductPage({ params }: Props) {
                   {MARKETS[productMarket].taxName}
                 </p>
               ) : null}
-              {product.description ? (
+              {isRichDescription(product.description) ? (
+                <div className="mt-3 text-zinc-600">
+                  <p className="line-clamp-4 whitespace-pre-line">{markdownToPlain(descriptionIntro(product.description))}</p>
+                  <a href="#details" className="mt-1 inline-block text-sm font-medium text-teal-700 hover:underline">
+                    Full details, specifications and Q&amp;A ↓
+                  </a>
+                </div>
+              ) : product.description ? (
                 <p className="mt-3 whitespace-pre-line text-zinc-600">{product.description}</p>
               ) : null}
               <div className="mt-4 max-w-xl">
@@ -287,6 +295,8 @@ export default async function ProductPage({ params }: Props) {
             </div>
           </div>
         </ProductSelectionProvider>
+
+        {isRichDescription(product.description) ? <ProductDetails description={product.description} /> : null}
 
         {related.length ? (
           <section className="mt-8">

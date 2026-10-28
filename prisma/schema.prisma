@@ -212,6 +212,10 @@ model Product {
   slug                String                @unique
   name                String
   description         String?
+  /// The supplier's original text, kept as input for AI-written descriptions (never shown to shoppers).
+  sourceDescription   String?
+  /// When the current description was written by AI.
+  descriptionWrittenAt DateTime?
   basePrice           Decimal               @db.Decimal(12, 2)
   /// Optional "was" price shown crossed out; only shown when above the selling price.
   compareAtPrice      Decimal?              @db.Decimal(12, 2)
@@ -668,6 +672,8 @@ model ImportJob {
   vendorId     String
   stockPerItem Int
   showStockCount Boolean @default(true)
+  /// Write AI descriptions for the new products once the import finishes.
+  writeDescriptions Boolean @default(false)
   createdById  String?
   /// Products parsed from the file, so the import doesn't need the upload again.
   products     Json

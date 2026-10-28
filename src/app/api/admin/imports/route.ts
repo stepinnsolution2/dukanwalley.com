@@ -58,6 +58,7 @@ export async function POST(req: Request) {
       stockPerItem,
       // "0": shoppers see only "In stock" for these products.
       showStockCount: form?.get("showStockCount") !== "0",
+      writeDescriptions: form?.get("writeDescriptions") === "1",
       userId: authz.session.user.id,
     });
     return NextResponse.json({ id: job.id });

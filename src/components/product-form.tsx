@@ -63,6 +63,7 @@ export function ProductForm({
   currentVendor,
   submitLabel,
   onSubmit,
+  onWriteDescription,
 }: {
   variant: "sales" | "admin";
   initial?: ProductFormInitial;
@@ -72,7 +73,11 @@ export function ProductForm({
   submitLabel: string;
   /** Sends the payload; resolves to an error message, or null on success. */
   onSubmit: (payload: Record<string, unknown>) => Promise<string | null>;
+  /** Admin only: asks the AI for a description of the saved product (shown here for review). */
+  onWriteDescription?: () => Promise<{ description?: string; error?: string }>;
 }) {
+  const [writing, setWriting] = useState(false);
+  const [writeError, setWriteError] = useState<string | null>(null);
   // Pinned on mount so a parent re-render (new object identity) doesn't refetch.
   const [pinnedVendor] = useState(currentVendor);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -218,10 +223,34 @@ export function ProductForm({
         Name
         <input className={input} value={f.name} onChange={set("name")} required minLength={2} />
       </label>
-      <label className={label}>
-        Description
-        <textarea className={input} rows={4} value={f.description} onChange={set("description")} />
-      </label>
+      <div className={label}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span>Description <span className="font-normal text-zinc-500">(Markdown: ## headings, - bullet points)</span></span>
+          {onWriteDescription ? (
+            <button
+              type="button"
+              disabled={writing}
+              onClick={async () => {
+                if (f.description.trim() && !confirm("Replace the current description with a new AI-written one? It's saved only when you save the product.")) return;
+                setWriting(true);
+                setWriteError(null);
+                const r = await onWriteDescription();
+                setWriting(false);
+                if (r.description) setF((s) => ({ ...s, description: r.description! }));
+                else setWriteError(r.error ?? "Could not write a description");
+              }}
+              className="rounded border border-violet-700 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800 disabled:opacity-50"
+            >
+              {writing ? "Writing… (up to a minute)" : "✨ Write with AI"}
+            </button>
+          ) : null}
+        </div>
+        <textarea className={input} rows={f.description.includes("## ") ? 16 : 4} value={f.description} onChange={set("description")} />
+        {writeError ? <span className="mt-1 block font-normal text-red-600">{writeError}</span> : null}
+        {onWriteDescription && f.description.includes("## ") ? (
+          <span className="mt-1 block font-normal text-zinc-500">Check the facts before saving; edit anything that isn't right.</span>
+        ) : null}
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className={label}>

@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { MARKET_CODES, MARKETS, type MarketCode } from "@/lib/markets";
 import { can } from "@/lib/permissions";
+import { AiDescriptionsPanel } from "./ai-descriptions-panel";
 
 type Product = {
   id: string;
@@ -270,6 +271,7 @@ function ProductsList() {
         </select>
       </div>
 
+      <AiDescriptionsPanel selected={[...selected]} canEdit={canEdit} />
       {canEdit && selected.size > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-teal-50 px-3 py-2 text-sm">
           <span>{selected.size} selected:</span>

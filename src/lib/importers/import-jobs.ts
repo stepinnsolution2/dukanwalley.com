@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { parseCsv } from "@/lib/importers/csv";
 import { importMarkazProducts, parseShopifyRows, SOURCE, type ImportResult, type MarkazProduct } from "@/lib/importers/markaz";
 import { readFirstSheet } from "@/lib/importers/xlsx";
+import { aiDescriptionsConfigured, runBulkDescriptions } from "@/lib/ai/product-description";
 
 // Admin › Products › Import: a Markaz export is parsed and dry-run into a preview, then imported
 // in the background (image downloads take minutes) while the page polls ImportJob for progress.
@@ -28,6 +29,7 @@ export async function createPreviewJob(input: {
   vendorId: string;
   stockPerItem: number;
   showStockCount: boolean;
+  writeDescriptions: boolean;
   userId: string;
 }) {
   let products: MarkazProduct[];
@@ -49,6 +51,7 @@ export async function createPreviewJob(input: {
       vendorId: input.vendorId,
       stockPerItem: input.stockPerItem,
       showStockCount: input.showStockCount,
+      writeDescriptions: input.writeDescriptions,
       createdById: input.userId,
       products: products as unknown as object,
       preview: preview as unknown as object,
@@ -118,6 +121,11 @@ export async function runImportJob(id: string) {
     });
     await save({ status: "done", finishedAt: new Date() });
     console.info(`[import] ${job.fileName}: ${tally.created} created, ${tally.updated} updated, ${tally.skipped} skipped`);
+    // New products get AI descriptions in the background (shown in Admin › Products).
+    const createdIds = results.filter((r) => r.action === "created" && r.productId).map((r) => r.productId!);
+    if (job.writeDescriptions && createdIds.length && (await aiDescriptionsConfigured())) {
+      runBulkDescriptions(createdIds).catch((e) => console.error("[import] AI descriptions failed", e));
+    }
   } catch (e) {
     console.error("[import] failed", id, e);
     await save({ status: "failed", finishedAt: new Date(), error: e instanceof Error ? e.message : String(e) }).catch(() => {});

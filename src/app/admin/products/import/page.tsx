@@ -19,6 +19,7 @@ type Job = JobSummary & {
   storeName: string;
   stockPerItem: number;
   showStockCount: boolean;
+  writeDescriptions: boolean;
   preview: Result[];
   results: Result[] | null;
   error: string | null;
@@ -42,6 +43,7 @@ export default function ImportPage() {
   const [vendorId, setVendorId] = useState("");
   const [stock, setStock] = useState("50");
   const [showCount, setShowCount] = useState(true);
+  const [writeDescriptions, setWriteDescriptions] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [busy, setBusy] = useState(false);
@@ -95,6 +97,7 @@ export default function ImportPage() {
     body.set("vendorId", vendorId);
     body.set("stockPerItem", stock);
     body.set("showStockCount", showCount ? "1" : "0");
+    body.set("writeDescriptions", writeDescriptions ? "1" : "0");
     const res = await fetch("/api/admin/imports", { method: "POST", body });
     const j = await res.json().catch(() => ({}));
     setBusy(false);
@@ -175,6 +178,10 @@ export default function ImportPage() {
             <option value="in-stock">Only “In stock”</option>
           </select>
         </label>
+        <label className="flex items-center gap-2 self-end pb-2 text-sm">
+          <input type="checkbox" checked={writeDescriptions} onChange={(e) => setWriteDescriptions(e.target.checked)} />
+          Write AI descriptions for new products
+        </label>
         <button disabled={busy || !file} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">
           {busy && !job ? "Reading file…" : "Preview"}
         </button>
@@ -187,7 +194,7 @@ export default function ImportPage() {
             <div>
               <h2 className="font-semibold">{job.fileName}</h2>
               <p className="text-sm text-zinc-600">
-                {STATUS_LABEL[job.status] ?? job.status} · {job.total} products · into {job.storeName} · stock {job.stockPerItem} each{job.showStockCount ? "" : " (shown as “In stock”)"}
+                {STATUS_LABEL[job.status] ?? job.status} · {job.total} products · into {job.storeName} · stock {job.stockPerItem} each{job.showStockCount ? "" : " (shown as “In stock”)"}{job.writeDescriptions ? " · AI descriptions after import" : ""}
               </p>
             </div>
             {canStart ? (

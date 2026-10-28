@@ -95,6 +95,8 @@ export function validateIntegrationValue(key: string, value: string): string | n
   if (/_SITE_VERIFICATION$/.test(key) && !/^[A-Za-z0-9_-]{10,120}$/.test(value)) return "Paste the code from the verification tag";
   if (key === "SMTP_PORT" && !/^\d{2,5}$/.test(value)) return "Port must be a number, e.g. 465 or 587";
   if (key === "JAZZCASH_INQUIRY_URL" && !/^https:\/\/\S+$/.test(value)) return "Must be an https:// URL";
+  if (key === "ANTHROPIC_API_KEY" && !/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(value)) return "Anthropic keys start with sk-ant-";
+  if (key === "AI_DESCRIPTION_MODEL" && !/^claude-[a-z0-9-]+$/.test(value)) return "Choose a model";
   if (value.length > 500) return "Too long";
   return null;
 }

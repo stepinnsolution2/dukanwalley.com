@@ -142,6 +142,11 @@ export default function AdminProductPage() {
             }}
             submitLabel="Save changes"
             onSubmit={save}
+            onWriteDescription={async () => {
+              const res = await fetch(`/api/admin/products/${id}/describe`, { method: "POST" });
+              const j = await res.json().catch(() => ({}));
+              return res.ok ? { description: j.description } : { error: j.error ?? "Could not write a description" };
+            }}
           />
         </div>
       ) : (

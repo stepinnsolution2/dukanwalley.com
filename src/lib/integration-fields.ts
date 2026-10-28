@@ -13,7 +13,7 @@ export type IntegrationField = {
 };
 
 export type IntegrationGroup = {
-  id: "jazzcash" | "easypaisa" | "cards" | "email" | "analytics";
+  id: "jazzcash" | "easypaisa" | "cards" | "email" | "analytics" | "ai";
   title: string;
   description: string;
   fields: readonly IntegrationField[];
@@ -109,6 +109,31 @@ export const INTEGRATION_GROUPS: readonly IntegrationGroup[] = [
       { key: "BING_SITE_VERIFICATION", label: "Bing Webmaster verification", placeholder: "paste the meta tag or its code" },
     ],
     required: [],
+  },
+  {
+    id: "ai",
+    title: "AI product descriptions",
+    description:
+      "Writes detailed, original product descriptions from each product's details and photos (Admin › Products). Uses your Anthropic (Claude) account; you pay Anthropic per description.",
+    fields: [
+      {
+        key: "ANTHROPIC_API_KEY",
+        label: "Anthropic API key",
+        secret: true,
+        placeholder: "sk-ant-…",
+        help: "console.anthropic.com › API keys › Create key. Add some credit under Billing first.",
+      },
+      {
+        key: "AI_DESCRIPTION_MODEL",
+        label: "Model",
+        options: [
+          { value: "claude-sonnet-5-5", label: "Claude Sonnet 5.5 (recommended)" },
+          { value: "claude-opus-5-5", label: "Claude Opus 5.5 (best writing, costs more)" },
+          { value: "claude-haiku-5-5", label: "Claude Haiku 5.5 (cheapest)" },
+        ],
+      },
+    ],
+    required: ["ANTHROPIC_API_KEY"],
   },
 ];
 

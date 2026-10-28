@@ -540,6 +540,7 @@ export async function importMarkazProducts(
           slug: `${slugify(p.title)}-${randomBytes(3).toString("hex")}`,
           name: p.title,
           description,
+          sourceDescription: p.html || null,
           basePrice: new Prisma.Decimal(basePrice),
           compareAtPrice: compareAtPrice === null ? null : new Prisma.Decimal(compareAtPrice),
           showStockCount: opts.showStockCount ?? true,
