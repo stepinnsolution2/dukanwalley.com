@@ -21,8 +21,16 @@ export function AiDescriptionsPanel({ selected, canEdit }: { selected: string[];
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let ignore = false;
+    void fetch("/api/admin/products/describe")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j && !ignore) setState(j);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
   const running = state?.run.running ?? false;
   useEffect(() => {
     if (!running) return;

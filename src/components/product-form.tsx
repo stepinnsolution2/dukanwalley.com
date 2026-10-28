@@ -248,7 +248,7 @@ export function ProductForm({
         <textarea className={input} rows={f.description.includes("## ") ? 16 : 4} value={f.description} onChange={set("description")} />
         {writeError ? <span className="mt-1 block font-normal text-red-600">{writeError}</span> : null}
         {onWriteDescription && f.description.includes("## ") ? (
-          <span className="mt-1 block font-normal text-zinc-500">Check the facts before saving; edit anything that isn't right.</span>
+          <span className="mt-1 block font-normal text-zinc-500">Check the facts before saving; edit anything that is not right.</span>
         ) : null}
       </div>
 
