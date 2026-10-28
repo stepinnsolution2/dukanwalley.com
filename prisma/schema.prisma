@@ -225,6 +225,9 @@ model Product {
   stock               Int                   @default(0)
   /// false: shoppers see only "In stock", never the quantity.
   showStockCount      Boolean               @default(true)
+  /// Average of published reviews (0 when none) and their count, kept in sync by src/lib/reviews.ts.
+  ratingAvg           Float                 @default(0)
+  ratingCount         Int                   @default(0)
   categoryId          String
   vendorId            String
   salesPersonId       String?
@@ -262,6 +265,7 @@ model Product {
   favorites   Favorite[]
   variants    ProductVariant[]
   recommendationEvents RecommendationEvent[]
+  reviews             ProductReview[]
 
   @@unique([source, sourceRef])
 }
@@ -471,6 +475,7 @@ model OrderItem {
   order   Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product       @relation(fields: [productId], references: [id])
   vendor  VendorProfile @relation(fields: [vendorId], references: [id])
+  review  ProductReview?
 
   @@index([productId])
 }
@@ -783,4 +788,29 @@ model ContentPage {
 
   @@unique([kind, slug])
   @@index([kind, status, publishedAt])
+}
+
+/// A verified buyer's review: one per delivered order line.
+model ProductReview {
+  id          String   @id @default(cuid())
+  productId   String
+  orderItemId String   @unique
+  orderId     String
+  userId      String?
+  /// 1 to 5 stars.
+  rating      Int
+  title       String?
+  body        String
+  /// Shown publicly, e.g. "Ayesha K."
+  authorName  String
+  /// published | hidden (hidden by staff)
+  status      String   @default("published")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([productId, status, createdAt])
+  @@index([status, createdAt])
 }

@@ -29,7 +29,7 @@ export default async function MyOrderPage({ params }: Props) {
           ← My orders
         </Link>
         <div className="mt-4">
-          <OrderSummary order={order} />
+          <OrderSummary order={order} reviewerName={session.user.name ?? undefined} />
         </div>
       </main>
       <SiteFooter />

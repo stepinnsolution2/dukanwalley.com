@@ -8,6 +8,7 @@ const nav: { href: string; label: string; permission: Permission }[] = [
   { href: "/admin", label: "Overview", permission: "dashboard:view" },
   { href: "/admin/vendors", label: "Vendors", permission: "vendors:view" },
   { href: "/admin/products", label: "Products", permission: "products:view" },
+  { href: "/admin/reviews", label: "Reviews", permission: "products:review" },
   { href: "/admin/categories", label: "Categories", permission: "catalog:manage" },
   { href: "/admin/orders", label: "Orders", permission: "orders:view" },
   { href: "/admin/reports", label: "Reports", permission: "reports:view" },

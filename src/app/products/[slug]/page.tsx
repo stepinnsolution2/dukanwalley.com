@@ -14,6 +14,8 @@ import { formatMoney, MARKETS } from "@/lib/markets";
 import { absoluteUrl, breadcrumbJsonLd, inMarket, marketPlace, metaDescription, SITE_NAME, type Crumb } from "@/lib/seo";
 import { publicStoreName, storeHref } from "@/lib/vendor-slug";
 import { WasPrice } from "@/components/was-price";
+import { loadProductReviews, ProductReviews } from "@/components/product-reviews";
+import { Stars } from "@/components/stars";
 import { descriptionIntro, isRichDescription, markdownToPlain, ProductDetails } from "@/components/product-details";
 import { AddToCart, type PickerAxis } from "./add-to-cart";
 import { ProductViewTracker } from "./product-detail-client";
@@ -125,7 +127,9 @@ export default async function ProductPage({ params }: Props) {
     { name: product.category.name, path: categoryPath(product.category.slug) },
     { name: product.name, path },
   ];
-  // Only facts from the listing itself: no invented brand, condition, ratings or reviews.
+  // Only facts from the listing itself: no invented brand or condition. Ratings come only from
+  // verified buyers' published reviews.
+  const reviewData = await loadProductReviews(product.id);
   const m = MARKETS[productMarket];
   const money = (n: number) => n.toFixed(m.fractionDigits);
   const availability = product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
@@ -138,6 +142,19 @@ export default async function ProductPage({ params }: Props) {
     ...(product.description ? { description: markdownToPlain(product.description) } : {}),
     ...(product.images.length ? { image: product.images.map((i) => absoluteUrl(i.url)) } : {}),
     ...(product.sku ? { sku: product.sku } : {}),
+    ...(product.ratingCount > 0
+      ? {
+          aggregateRating: { "@type": "AggregateRating", ratingValue: product.ratingAvg.toFixed(1), reviewCount: product.ratingCount, bestRating: 5, worstRating: 1 },
+          review: reviewData.reviews.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5, worstRating: 1 },
+            author: { "@type": "Person", name: r.authorName },
+            datePublished: r.createdAt.toISOString().slice(0, 10),
+            ...(r.title ? { name: r.title } : {}),
+            reviewBody: r.body,
+          })),
+        }
+      : {}),
     category: product.category.parent
       ? `${product.category.parent.name} > ${product.category.name}`
       : product.category.name,
@@ -196,9 +213,17 @@ export default async function ProductPage({ params }: Props) {
             />
             <div>
               <div className="flex items-start justify-between gap-4">
-                <h1 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
-                  {product.name}
-                </h1>
+                <div>
+                  <h1 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
+                    {product.name}
+                  </h1>
+                  {product.ratingCount > 0 ? (
+                    <a href="#reviews" className="mt-1 flex items-center gap-1.5 text-sm text-zinc-600 hover:text-teal-700">
+                      <Stars rating={product.ratingAvg} />
+                      {product.ratingAvg.toFixed(1)} · {product.ratingCount} {product.ratingCount === 1 ? "review" : "reviews"}
+                    </a>
+                  ) : null}
+                </div>
                 <FavoriteButton
                   productId={product.id}
                   productName={product.name}
@@ -296,7 +321,8 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </ProductSelectionProvider>
 
-        {isRichDescription(product.description) ? <ProductDetails description={product.description} /> : null}
+        {isRichDescription(product.description) ? <ProductDetails description={product.description} reviewCount={product.ratingCount} /> : null}
+        <ProductReviews avg={product.ratingAvg} count={product.ratingCount} {...reviewData} />
 
         {related.length ? (
           <section className="mt-8">

@@ -1,5 +1,7 @@
 import { formatMoney, MARKETS, PAYMENT_METHOD_LABELS, type MarketCode, type MarketPaymentMethod } from "@/lib/markets";
+import Link from "next/link";
 import { ORDER_STATUS_LABELS, statusBadgeClass } from "@/lib/order-status";
+import { ReviewForm, type ExistingReview } from "@/components/review-form";
 
 export type BuyerOrder = {
   orderNumber: string;
@@ -13,12 +15,29 @@ export type BuyerOrder = {
   courier: string | null;
   trackingNumber: string | null;
   shippingAddress: unknown;
-  items: { id: string; title: string; quantity: number; unitPrice: { toString(): string } }[];
+  items: {
+    id: string;
+    title: string;
+    quantity: number;
+    unitPrice: { toString(): string };
+    product: { slug: string; name: string };
+    review: ExistingReview;
+  }[];
   events: { id: string; status: string; createdAt: Date }[];
 };
 
 /** What a buyer sees about their order: items, totals, delivery, and a status timeline (no staff notes). */
-export function OrderSummary({ order }: { order: BuyerOrder }) {
+export function OrderSummary({
+  order,
+  reviewProof,
+  reviewerName,
+}: {
+  order: BuyerOrder;
+  /** Guests on Track order: the order number and contact they proved the order with. */
+  reviewProof?: { orderNumber: string; contact: string };
+  reviewerName?: string;
+}) {
+  const delivered = order.status === "DELIVERED";
   const m = MARKETS[order.market];
   const money = (v: { toString(): string } | number) => formatMoney(order.market, Number(v.toString()));
   const address = order.shippingAddress as Record<string, string> | null;
@@ -51,11 +70,16 @@ export function OrderSummary({ order }: { order: BuyerOrder }) {
 
       <ul className="divide-y rounded-xl border border-zinc-200 bg-white text-sm">
         {order.items.map((i) => (
-          <li key={i.id} className="flex justify-between gap-3 px-4 py-3">
-            <span>
-              {i.title} × {i.quantity}
-            </span>
-            <span>{money(Number(i.unitPrice.toString()) * i.quantity)}</span>
+          <li key={i.id} className="px-4 py-3">
+            <div className="flex justify-between gap-3">
+              <Link href={`/products/${i.product.slug}`} className="hover:text-teal-700">
+                {i.title} × {i.quantity}
+              </Link>
+              <span>{money(Number(i.unitPrice.toString()) * i.quantity)}</span>
+            </div>
+            {delivered ? (
+              <ReviewForm orderItemId={i.id} productName={i.product.name} existing={i.review} defaultName={reviewerName} proof={reviewProof} />
+            ) : null}
           </li>
         ))}
         <li className="flex justify-between px-4 py-2 text-zinc-600">
@@ -105,6 +129,15 @@ export const buyerOrderSelect = {
   courier: true,
   trackingNumber: true,
   shippingAddress: true,
-  items: { select: { id: true, title: true, quantity: true, unitPrice: true } },
+  items: {
+    select: {
+      id: true,
+      title: true,
+      quantity: true,
+      unitPrice: true,
+      product: { select: { slug: true, name: true } },
+      review: { select: { rating: true, title: true, body: true, authorName: true, status: true } },
+    },
+  },
   events: { select: { id: true, status: true, createdAt: true }, orderBy: { createdAt: "asc" } },
 } as const;

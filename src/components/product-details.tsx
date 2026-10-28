@@ -29,14 +29,19 @@ const TAB_FOR: [RegExp, string, string][] = [
 ];
 
 /** Full-width details below the product: tab links to Overview, Specifications and Q&A. */
-export function ProductDetails({ description }: { description: string }) {
+export function ProductDetails({ description, reviewCount = 0 }: { description: string; reviewCount?: number }) {
   const [intro, ...rest] = description.split(/^## /m);
   const sections = rest.map((chunk) => {
     const [heading, ...body] = chunk.split("\n");
     const tab = TAB_FOR.find(([re]) => re.test(heading.trim()));
     return { heading: heading.trim(), body: body.join("\n").trim(), id: tab?.[1] ?? null, tab: tab?.[2] ?? null };
   });
-  const tabs = [{ id: "overview", label: "Product overview" }, ...sections.filter((s) => s.id).map((s) => ({ id: s.id!, label: s.tab! }))];
+  const tabs = [
+    { id: "overview", label: "Product overview" },
+    ...sections.filter((s) => s.id).map((s) => ({ id: s.id!, label: s.tab! })),
+    // The reviews section follows this one on the product page.
+    { id: "reviews", label: reviewCount ? `Ratings and reviews (${reviewCount})` : "Ratings and reviews" },
+  ];
 
   return (
     <section id="details" className="mt-8 scroll-mt-20 overflow-hidden rounded-xl border border-zinc-200 bg-white">

@@ -3,12 +3,15 @@ import Link from "next/link";
 import { formatMoney, type MarketCode } from "@/lib/markets";
 import { canOptimizeImage } from "@/lib/media-url";
 import { WasPrice } from "@/components/was-price";
+import { RatingBadge } from "@/components/stars";
 
 type TileProduct = {
   slug: string;
   name: string;
   basePrice: { toString(): string } | number | string;
   compareAtPrice?: { toString(): string } | number | string | null;
+  ratingAvg?: number;
+  ratingCount?: number;
   isHot?: boolean;
   images: { url: string }[];
 };
@@ -41,6 +44,7 @@ export function ProductTile({ product: p, market }: { product: TileProduct; mark
         <h3 className="line-clamp-2 text-xs text-zinc-800">{p.name}</h3>
         <p className="text-sm font-semibold text-teal-800">{formatMoney(market, p.basePrice)}</p>
         <WasPrice market={market} price={Number(p.basePrice)} compareAt={p.compareAtPrice} className="text-[11px]" />
+        <RatingBadge avg={p.ratingAvg ?? 0} count={p.ratingCount ?? 0} />
       </div>
     </Link>
   );

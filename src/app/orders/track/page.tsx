@@ -50,7 +50,11 @@ export default async function TrackOrderPage({ searchParams }: { searchParams: P
         ) : null}
         {order ? (
           <div className="mt-6">
-            <OrderSummary order={order} />
+            <OrderSummary
+              order={order}
+              reviewProof={{ orderNumber: order.orderNumber, contact: contact! }}
+              reviewerName={(order.shippingAddress as { name?: string } | null)?.name}
+            />
           </div>
         ) : null}
       </main>

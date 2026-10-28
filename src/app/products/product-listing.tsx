@@ -17,6 +17,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { AutoSubmitForm } from "./auto-submit-form";
 import { publicStoreName } from "@/lib/vendor-slug";
 import { WasPrice } from "@/components/was-price";
+import { RatingBadge } from "@/components/stars";
 import { PAGE_WIDE } from "@/lib/page-layout";
 
 const PAGE_SIZE = 24;
@@ -554,6 +555,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
                             {formatMoney(market, from)}
                           </p>
                           {varies ? null : <WasPrice market={market} price={from} compareAt={p.compareAtPrice} />}
+                          <RatingBadge avg={p.ratingAvg} count={p.ratingCount} />
                         </div>
                       </Link>
                       <FavoriteButton
