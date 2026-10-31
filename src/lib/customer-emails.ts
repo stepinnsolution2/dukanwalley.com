@@ -287,10 +287,6 @@ export async function buildBuyerOrderEmail(orderId: string, e: BuyerOrderEmail):
       break;
   }
 
-  if (order.freeGift && (e.kind === "confirm" || e.kind === "placed" || e.kind === "shipped")) {
-    c.paragraphs.push("🎁 Good news: your order qualifies for our free gift, which will come in the same parcel.");
-  }
-
   const owner = await ownerFor({ userId: order.customerId, email: order.customerEmail, cartId: order.checkoutCartId });
   const sections = await shopperSections({
     owner,

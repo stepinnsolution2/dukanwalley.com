@@ -14,7 +14,7 @@ const IDLE_MS = 6_000;
 const MIN_MS = 5_000;
 const MAX_MS = 40_000;
 
-type Offer = { amount: number; headline: string; text: string };
+type Offer = { panel: string; headline: string; text: string };
 
 function readState(): { subscribed?: boolean; dismissed?: boolean } {
   try {
@@ -143,7 +143,7 @@ export function EmailCapture({ enabled, offer }: { enabled: boolean; offer: Offe
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Free gift offer"
+          aria-label="Join for deals"
           onClick={(e) => e.stopPropagation()}
           className="relative grid w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:grid-cols-2 motion-safe:animate-[slideup_.35s_ease-out]"
         >
@@ -159,13 +159,9 @@ export function EmailCapture({ enabled, offer }: { enabled: boolean; offer: Offe
           </button>
           <div className="flex flex-col items-center justify-center bg-[#16325c] px-6 py-8 text-center sm:py-12">
             <span className="text-5xl sm:text-6xl" aria-hidden>
-              🎁
+              🛍️
             </span>
-            <p className="mt-3 text-3xl font-black uppercase leading-tight tracking-tight text-[#ffc94d] sm:text-5xl">Free gift</p>
-            <p className="mt-2 text-lg font-extrabold uppercase leading-snug text-white sm:text-2xl">
-              on orders above
-              <span className="block text-[#ffc94d]">Rs {offer.amount.toLocaleString("en-PK")}</span>
-            </p>
+            <p className="mt-3 text-3xl font-black uppercase leading-tight tracking-tight text-[#ffc94d] sm:text-[2.6rem]">{offer.panel}</p>
             <p className="mt-6 hidden text-xs font-semibold tracking-[0.25em] text-white/70 sm:block">DUKANWALLEY.COM</p>
           </div>
           <div className="flex flex-col justify-center px-6 py-7 text-center sm:px-8">
@@ -173,7 +169,7 @@ export function EmailCapture({ enabled, offer }: { enabled: boolean; offer: Offe
               <>
                 <p className="text-2xl font-bold text-[#16325c]">You&apos;re in! 🎉</p>
                 <p className="mt-2 text-sm text-zinc-600">
-                  Thanks for joining. Shop for Rs {offer.amount.toLocaleString("en-PK")} or more and your free gift comes in the same parcel.
+                  Thanks for joining. Watch your inbox for our next sale, festive offers and new arrivals.
                 </p>
                 <button type="button" onClick={() => setOpen(false)} className="mt-5 rounded-lg bg-[#16325c] py-3 text-sm font-semibold uppercase tracking-wide text-white">
                   Start shopping

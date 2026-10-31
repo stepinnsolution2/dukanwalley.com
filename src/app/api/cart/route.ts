@@ -1,4 +1,4 @@
-import { captureEmail, freeGiftMinOrder } from "@/lib/marketing";
+import { captureEmail } from "@/lib/marketing";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -97,8 +97,6 @@ async function cartResponse(cart: LoadedCart) {
     market,
     paymentMethods: await availablePaymentMethods(market),
     codNote: codNote === "-" ? null : codNote,
-    /** Items total (in the market currency) that earns a free gift, or null. */
-    freeGiftMin: await freeGiftMinOrder(market),
     rewards,
   });
 }

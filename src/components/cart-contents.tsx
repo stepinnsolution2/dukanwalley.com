@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatMoney, MARKETS } from "@/lib/markets";
-import { FreeGiftBar } from "@/components/free-gift-bar";
 import { pointsValueMinor } from "@/lib/reward-rules";
 import type { Cart } from "@/components/cart-context";
 import { CartSuggestions } from "@/components/cart-suggestions";
@@ -148,9 +147,6 @@ export function CartContents({
           </p>
         ) : (
           <>
-            <div className="mt-4">
-              <FreeGiftBar market={cart.market} itemsTotal={subtotal} min={cart.freeGiftMin} />
-            </div>
             <RewardsNote cart={cart} />
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

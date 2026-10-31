@@ -100,24 +100,29 @@ export async function marketingSettings(): Promise<MarketingSettings> {
   };
 }
 
-export const POPUP_HEADLINE_DEFAULT = "Free gift on orders above Rs {amount}";
+export const POPUP_HEADLINE_DEFAULT = "Join for exclusive deals";
 export const POPUP_TEXT_DEFAULT =
-  "Join DukanWalley with your email: be first to hear about sales and new arrivals, and remember that every order above Rs {amount} comes with a free gift.";
+  "Subscribe with your email and be the first to hear about sales, festive offers and new arrivals from our sellers.";
+export const POPUP_PANEL_DEFAULT = "Members get the best deals";
 
-/** Items total (Pakistan, in rupees) that earns a free gift; null when there is no offer. */
+/**
+ * Items total (Pakistan, in rupees) that earns a free gift; null when there is no offer. Internal
+ * only: shoppers are never told the amount; staff tell them after the order (Admin › Orders 🎁).
+ */
 export async function freeGiftMinOrder(market: MarketCode): Promise<number | null> {
   if (market !== "PK") return null;
   const n = Number((await integrationSettings()).FREE_GIFT_MIN_ORDER ?? "");
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** The sign-up pop-up's offer wording, or null for the plain sign-up box. */
-export async function popupOffer(): Promise<{ amount: number; headline: string; text: string } | null> {
+/** The sign-up pop-up wording (Admin › Settings › Email marketing). */
+export async function popupOffer(): Promise<{ panel: string; headline: string; text: string }> {
   const s = await integrationSettings();
-  const amount = Number(s.FREE_GIFT_MIN_ORDER ?? "");
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-  const fill = (t: string) => t.replace(/\{amount\}/g, amount.toLocaleString("en-PK"));
-  return { amount, headline: fill(s.POPUP_HEADLINE || POPUP_HEADLINE_DEFAULT), text: fill(s.POPUP_TEXT || POPUP_TEXT_DEFAULT) };
+  return {
+    panel: s.POPUP_PANEL || POPUP_PANEL_DEFAULT,
+    headline: s.POPUP_HEADLINE || POPUP_HEADLINE_DEFAULT,
+    text: s.POPUP_TEXT || POPUP_TEXT_DEFAULT,
+  };
 }
 
 /** Marketing emails (cart reminders + newsletters) still allowed today (Pakistan day). */

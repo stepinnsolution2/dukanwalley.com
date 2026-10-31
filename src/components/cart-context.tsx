@@ -9,8 +9,6 @@ export type Cart = {
   market: MarketCode;
   paymentMethods: MarketPaymentMethod[];
   rewards: { signedIn: boolean; earnPoints: number; balance: number };
-  /** Items total that earns a free gift (Pakistan), or null when there is no offer. */
-  freeGiftMin: number | null;
   items: {
     id: string;
     quantity: number;
@@ -41,7 +39,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 async function fetchCart(): Promise<Cart> {
   const res = await fetch("/api/cart");
   const j = await res.json();
-  return { ...j.cart, market: j.market, paymentMethods: j.paymentMethods ?? [], rewards: j.rewards, freeGiftMin: j.freeGiftMin ?? null };
+  return { ...j.cart, market: j.market, paymentMethods: j.paymentMethods ?? [], rewards: j.rewards };
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
