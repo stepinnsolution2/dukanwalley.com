@@ -1,3 +1,4 @@
+import { sendBuyerOrderEmail } from "@/lib/customer-emails";
 import { sendEmail } from "@/lib/email";
 import { sendSms } from "@/lib/twilio";
 import { broadcastAdmin } from "@/lib/realtime";
@@ -53,15 +54,13 @@ export async function notifyVendorSkuSold(opts: {
 }
 
 export async function notifyBuyerOrder(opts: {
-  email: string;
+  orderId: string;
   phone?: string | null;
   orderNumber: string;
   total: string;
 }) {
-  await notifyUserChannels({
-    email: opts.email,
-    phone: opts.phone,
-    subject: `Order confirmed ${opts.orderNumber}`,
-    message: `Thanks for your order ${opts.orderNumber}. Total ${opts.total}.`,
-  });
+  await Promise.all([
+    sendBuyerOrderEmail(opts.orderId, { kind: "placed" }),
+    opts.phone ? sendSms(opts.phone, `Thanks for your order ${opts.orderNumber}. Total ${opts.total}.`) : null,
+  ]);
 }

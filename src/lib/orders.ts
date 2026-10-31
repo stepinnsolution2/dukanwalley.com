@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendBuyerOrderEmail } from "@/lib/customer-emails";
 import { recordOrderLedger } from "@/lib/ledger";
 import { logOrderEvent } from "@/lib/order-lifecycle";
 import { formatMoney } from "@/lib/markets";
@@ -186,11 +186,7 @@ export async function requestCodConfirmation(orderId: string, appUrl: string) {
         results.push(sms.ok ? "sms" : `sms failed (${sms.error})`);
       }
     }
-    await sendEmail({
-      to: order.customerEmail,
-      subject: `Please confirm your order ${order.orderNumber}`,
-      text,
-    });
+    await sendBuyerOrderEmail(orderId, { kind: "confirm", link, hours: COD_CONFIRM_TTL_HOURS });
     results.push("email");
     console.info(`[cod] ${order.orderNumber} confirmation sent via ${results.join(", ")}`);
   } catch (e) {
@@ -220,7 +216,7 @@ export async function notifyOrderCancelled(orderId: string, reason: string) {
   if (!order) return;
   const text = `Your order ${order.orderNumber} was cancelled: ${reason}.`;
   await Promise.allSettled([
-    sendEmail({ to: order.customerEmail, subject: `Order ${order.orderNumber} cancelled`, text }),
+    sendBuyerOrderEmail(orderId, { kind: "cancelled", reason }),
     order.customerPhone ? sendSms(order.customerPhone, text) : Promise.resolve(),
   ]);
 }
@@ -262,7 +258,7 @@ export async function sendOrderNotifications(orderId: string) {
       }),
     ),
     notifyBuyerOrder({
-      email: order.customerEmail,
+      orderId: order.id,
       phone: order.customerPhone,
       orderNumber: order.orderNumber,
       total,

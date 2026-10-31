@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendBuyerOrderEmail, type BuyerOrderEmail } from "@/lib/customer-emails";
 import { sendSms } from "@/lib/twilio";
 import { awardOrderPoints, refundRedeemedPoints, reverseEarnedPoints } from "@/lib/rewards";
 import { OrderStatus, PaymentMethod } from "@/generated/prisma/enums";
@@ -153,8 +153,16 @@ export async function notifyBuyerStatus(orderId: string, appUrl: string) {
   const make = order && buyerMessages[order.status];
   if (!order || !make) return;
   const text = `${make(order)} Track it: ${appUrl}/orders/track?order=${encodeURIComponent(order.orderNumber)}`;
+  const email: BuyerOrderEmail =
+    order.status === OrderStatus.SHIPPED
+      ? { kind: "shipped", courier: order.courier, trackingNumber: order.trackingNumber }
+      : order.status === OrderStatus.DELIVERED
+        ? { kind: "delivered" }
+        : order.status === OrderStatus.RETURNED
+          ? { kind: "returned" }
+          : { kind: "cancelled" };
   await Promise.allSettled([
-    sendEmail({ to: order.customerEmail, subject: `Order ${order.orderNumber}: ${order.status.toLowerCase()}`, text }),
+    sendBuyerOrderEmail(orderId, email),
     order.customerPhone ? sendSms(order.customerPhone, text) : Promise.resolve(),
   ]);
 }

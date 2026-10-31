@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { integrationSettings, type IntegrationSettings } from "@/lib/integration-settings";
+import { plainEmail, renderEmail, type EmailContent } from "@/lib/email-layout";
 
 /** SMTP from Admin › Settings, falling back to .env. Null when no host is set (emails are logged). */
 export function getTransport(s: IntegrationSettings) {
@@ -16,24 +17,21 @@ export function getTransport(s: IntegrationSettings) {
   });
 }
 
-export async function sendEmail(opts: {
-  to: string;
-  subject: string;
-  text: string;
-  html?: string;
-}) {
+/**
+ * Sends one email in the branded layout: pass `content` for a designed email, or just `text`
+ * (wrapped with the logo header and footer).
+ */
+export async function sendEmail(opts: { to: string; subject: string } & ({ content: EmailContent } | { text: string })) {
+  // Imported stores have placeholder logins (…@marketplace.internal) that can't receive mail;
+  // sending there would only bounce and hurt the sender reputation.
+  if (/\.internal$/i.test(opts.to.trim())) return;
+  const { html, text } = "content" in opts ? renderEmail(opts.content) : plainEmail(opts.subject, opts.text);
   const s = await integrationSettings();
   const from = s.EMAIL_FROM ?? "DukanWalley <noreply@localhost>";
   const transport = getTransport(s);
   if (!transport) {
-    console.info("[email:stub]", { from, ...opts });
+    console.info("[email:stub]", { from, to: opts.to, subject: opts.subject, text });
     return;
   }
-  await transport.sendMail({
-    from,
-    to: opts.to,
-    subject: opts.subject,
-    text: opts.text,
-    html: opts.html ?? opts.text.replace(/\n/g, "<br/>"),
-  });
+  await transport.sendMail({ from, to: opts.to, subject: opts.subject, text, html });
 }

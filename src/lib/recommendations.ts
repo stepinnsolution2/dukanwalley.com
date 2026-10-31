@@ -86,14 +86,20 @@ export async function getRecommendations({
   owner,
   market,
   limit = 10,
+  seed = [],
+  maxPerVendor = MAX_PER_VENDOR,
 }: {
   owner: CartOwner | null;
   market: MarketCode;
   limit?: number;
+  /** Products treated like cart items (e.g. what was just ordered): suggest similar, never these. */
+  seed?: { productId: string; variantId?: string | null }[];
+  /** Suggestions from one seller (default 2, so a cart shows a mix of stores). */
+  maxPerVendor?: number;
 }): Promise<Recommendation[]> {
   const now = Date.now();
 
-  const [cart, views, favourites, recentPurchases, categories] = await Promise.all([
+  const [cart, views, favourites, recentPurchases, categories, seedProducts, seedVariants] = await Promise.all([
     owner
       ? prisma.cart.findUnique({
           where: owner,
@@ -125,9 +131,24 @@ export async function getRecommendations({
         })
       : [],
     prisma.category.findMany({ select: { id: true, parentId: true } }),
+    seed.length
+      ? prisma.product.findMany({ where: { id: { in: seed.map((s) => s.productId) } }, select: { id: true, categoryId: true, basePrice: true } })
+      : [],
+    seed.some((s) => s.variantId)
+      ? prisma.productVariant.findMany({
+          where: { id: { in: seed.flatMap((s) => (s.variantId ? [s.variantId] : [])) } },
+          select: { id: true, options: true, price: true },
+        })
+      : [],
   ]);
 
-  const items = cart?.items ?? [];
+  const seedItems = seed.flatMap((s) => {
+    const product = seedProducts.find((p) => p.id === s.productId);
+    if (!product) return [];
+    const variant = seedVariants.find((v) => v.id === s.variantId) ?? null;
+    return [{ productId: s.productId, product, variant }];
+  });
+  const items = [...(cart?.items ?? []), ...seedItems];
   const inCart = new Set(items.map((i) => i.productId));
   const exclude = new Set([...inCart, ...recentPurchases.map((p) => p.productId)]);
 
@@ -337,13 +358,13 @@ export async function getRecommendations({
     });
   }
 
-  // --- Pick the best, at most MAX_PER_VENDOR from one seller ----------------------------
+  // --- Pick the best, at most maxPerVendor from one seller ----------------------------
   scored.sort((a, b) => b.score - a.score);
   const perVendor = new Map<string, number>();
   const out: Recommendation[] = [];
   for (const s of scored) {
     const n = perVendor.get(s.vendorId) ?? 0;
-    if (n >= MAX_PER_VENDOR) continue;
+    if (n >= maxPerVendor) continue;
     perVendor.set(s.vendorId, n + 1);
     out.push(s.rec);
     if (out.length >= limit) break;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendCartReminderEmail } from "@/lib/customer-emails";
 import { sendSms } from "@/lib/twilio";
 import { NotificationCampaignType } from "@/generated/prisma/enums";
 
@@ -68,13 +68,7 @@ export async function POST(req: Request) {
     const msg = `You left items in your cart (including ${top}). Complete checkout when ready. Offers may expire.`;
 
     try {
-      if (email) {
-        await sendEmail({
-          to: email,
-          subject: "Your cart is waiting",
-          text: msg,
-        });
-      }
+      if (email) await sendCartReminderEmail(cart.id, email);
       if (phone) await sendSms(phone, msg);
     } catch (e) {
       console.error("[abandoned-cart]", cart.id, e instanceof Error ? e.message : e);
