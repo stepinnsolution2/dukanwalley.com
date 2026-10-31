@@ -26,6 +26,8 @@ export type ProductFormInitial = {
   salesTaxBps: number;
   stock: number;
   showStockCount?: boolean;
+  /** Never runs out: orders don't use up stock and shoppers only see "In stock" (admin only). */
+  unlimitedStock?: boolean;
   categoryId: string;
   vendorId: string;
   metadata: Record<string, unknown> | null;
@@ -91,6 +93,7 @@ export function ProductForm({
     basePrice: initial ? String(Number(initial.basePrice)) : "",
     compareAtPrice: initial?.compareAtPrice != null ? String(Number(initial.compareAtPrice)) : "",
     showStockCount: initial?.showStockCount ?? true,
+    unlimitedStock: initial?.unlimitedStock ?? false,
     taxPercent: initial ? String(initial.salesTaxBps / 100) : "0",
     stock: initial ? String(initial.stock) : "10",
     categoryId: initial?.categoryId ?? "",
@@ -210,6 +213,7 @@ export function ProductForm({
       payload.featuredPriority = Math.trunc(Number(f.featuredPriority) || 0);
       payload.zoneTags = f.zoneTags.split(",").map((t) => t.trim()).filter(Boolean);
       payload.displayOnStorefront = f.displayOnStorefront;
+      payload.unlimitedStock = f.unlimitedStock;
       payload.availableForSale = f.displayOnStorefront && f.availableForSale;
     }
     const err = await onSubmit(payload);
@@ -300,9 +304,9 @@ export function ProductForm({
           <input
             className={input}
             inputMode="numeric"
-            value={hasVariants ? String(variantStock) : f.stock}
+            value={f.unlimitedStock ? "Unlimited" : hasVariants ? String(variantStock) : f.stock}
             onChange={set("stock")}
-            disabled={hasVariants}
+            disabled={hasVariants || f.unlimitedStock}
             required
           />
         </label>
@@ -322,13 +326,39 @@ export function ProductForm({
         <fieldset className={label}>
           Stock shown to shoppers
           <label className="mt-2 flex items-center gap-2 font-normal text-zinc-700">
-            <input type="radio" checked={f.showStockCount} onChange={() => setF((s) => ({ ...s, showStockCount: true }))} />
+            <input
+              type="radio"
+              checked={f.showStockCount && !f.unlimitedStock}
+              disabled={f.unlimitedStock}
+              onChange={() => setF((s) => ({ ...s, showStockCount: true }))}
+            />
             Quantity (e.g. “8 in stock”, “Only 3 left”)
           </label>
           <label className="mt-1 flex items-center gap-2 font-normal text-zinc-700">
-            <input type="radio" checked={!f.showStockCount} onChange={() => setF((s) => ({ ...s, showStockCount: false }))} />
+            <input
+              type="radio"
+              checked={!f.showStockCount || f.unlimitedStock}
+              disabled={f.unlimitedStock}
+              onChange={() => setF((s) => ({ ...s, showStockCount: false }))}
+            />
             Only “In stock”
           </label>
+          {variant === "admin" ? (
+            <label className="mt-2 flex items-start gap-2 font-normal text-zinc-700">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={f.unlimitedStock}
+                onChange={(e) => setF((s) => ({ ...s, unlimitedStock: e.target.checked }))}
+              />
+              <span>
+                Unlimited stock
+                <span className="block text-zinc-500">
+                  Always “In stock” and any quantity can be ordered (e.g. the supplier restocks on demand). Option stock numbers are ignored.
+                </span>
+              </span>
+            </label>
+          ) : null}
         </fieldset>
       </div>
       <p className="-mt-2 text-xs text-zinc-500">

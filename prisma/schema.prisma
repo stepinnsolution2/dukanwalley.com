@@ -225,6 +225,9 @@ model Product {
   stock               Int                   @default(0)
   /// false: shoppers see only "In stock", never the quantity.
   showStockCount      Boolean               @default(true)
+  /// Never runs out (made to order or restocked by the supplier): orders don't use up stock and
+  /// shoppers only see "In stock". Stock is held at UNLIMITED_STOCK so availability checks pass.
+  unlimitedStock      Boolean               @default(false)
   /// Average of published reviews (0 when none) and their count, kept in sync by src/lib/reviews.ts.
   ratingAvg           Float                 @default(0)
   ratingCount         Int                   @default(0)

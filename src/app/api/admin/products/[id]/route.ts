@@ -11,6 +11,7 @@ import {
   validateAttributes,
   validateVariants,
   variantsInputSchema,
+  UNLIMITED_STOCK,
 } from "@/lib/catalog";
 import { compareAtPriceError, isValidPrice, priceRuleMessage, taxRuleError } from "@/lib/markets";
 import { Prisma } from "@/generated/prisma/client";
@@ -21,6 +22,7 @@ const patchSchema = z.object({
   basePrice: z.number().positive().optional(),
   compareAtPrice: z.number().positive().nullable().optional(),
   showStockCount: z.boolean().optional(),
+  unlimitedStock: z.boolean().optional(),
   salesTaxBps: z.number().int().min(0).max(10000).optional(),
   stock: z.number().int().min(0).optional(),
   categoryId: z.string().optional(),
@@ -222,6 +224,13 @@ export async function PATCH(req: Request, { params }: Params) {
       data.availableForSale = d.availableForSale;
     if (d.isHot !== undefined) data.isHot = d.isHot;
     if (d.isPopular !== undefined) data.isPopular = d.isPopular;
+    if (d.unlimitedStock !== undefined) data.unlimitedStock = d.unlimitedStock;
+    // Unlimited stock: hold every option at UNLIMITED_STOCK and only ever say "In stock".
+    if (d.unlimitedStock ?? existing.unlimitedStock) {
+      data.stock = UNLIMITED_STOCK;
+      data.showStockCount = false;
+      await tx.productVariant.updateMany({ where: { productId: id }, data: { stock: UNLIMITED_STOCK } });
+    }
     if (Object.keys(data).length) {
       await tx.product.update({ where: { id }, data: data as object });
     }

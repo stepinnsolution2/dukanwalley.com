@@ -8,7 +8,10 @@
 // used). Their size-chart image names them, so it is never copied; its measurements are written
 // into each description instead.
 //
-// Re-running refreshes prices and "was" prices of products already imported.
+// Stock is unlimited (the supplier restocks on demand): shoppers only see "In stock".
+//
+// Re-running refreshes prices and "was" prices of products already imported, and keeps their
+// stock unlimited.
 //
 //   npx tsx scripts/import-haseebsarwar.ts            (add --dry-run to only print)
 import "dotenv/config";
@@ -19,7 +22,7 @@ import { saveUpload } from "../src/lib/storage";
 import { coverMarks } from "./cover-marks";
 import { MARKS } from "./haseebsarwar-marks";
 import { uniqueVendorSlug } from "../src/lib/vendor-slug";
-import { syncProductVariants, validateVariants } from "../src/lib/catalog";
+import { syncProductVariants, UNLIMITED_STOCK, validateVariants } from "../src/lib/catalog";
 import { Prisma } from "../src/generated/prisma/client";
 import { KycStatus, ProductApprovalStatus, UserRole, VendorRestriction } from "../src/generated/prisma/enums";
 
@@ -29,7 +32,6 @@ const STORE_NAME = "haseebsarwarclothing.com";
 const STORE_EMAIL = "haseebsarwar-store@marketplace.internal";
 const STORE_PHONE = "+923245199606";
 const PUBLIC_NAME = "Hassaine Clothing";
-const STOCK_PER_SIZE = 10;
 const MAX_IMAGES = 8;
 const DRY = process.argv.includes("--dry-run");
 
@@ -200,19 +202,27 @@ async function main() {
 
     const existing = await prisma.product.findUnique({ where: { source_sourceRef: { source: SOURCE, sourceRef: code } } });
     if (existing) {
-      if (!DRY) await prisma.product.update({ where: { id: existing.id }, data: { basePrice: new Prisma.Decimal(price), compareAtPrice } });
+      if (!DRY) {
+        await prisma.$transaction([
+          prisma.product.update({
+            where: { id: existing.id },
+            data: { basePrice: new Prisma.Decimal(price), compareAtPrice, unlimitedStock: true, showStockCount: false, stock: UNLIMITED_STOCK },
+          }),
+          prisma.productVariant.updateMany({ where: { productId: existing.id }, data: { stock: UNLIMITED_STOCK } }),
+        ]);
+      }
       console.log(`updated ${name}: Rs ${existing.basePrice} → ${price}${compareAtPrice ? ` (was ${was})` : ""}`);
       continue;
     }
 
-    // Sizes as offered; a size the supplier marks sold out gets no stock.
+    // Sizes as offered; a size the supplier marks sold out isn't sold.
     const variants = await validateVariants(
       category.id,
       "PK",
       SIZES.map((s) => {
         const v = p.variants.find((x) => x.option1.trim().toUpperCase() === s);
         if (!v) throw new Error(`${code}: no size ${s}`);
-        return { options: { size: s, color: colour }, stock: v.available ? STOCK_PER_SIZE : 0, price: Math.round(Number(v.price)) === price ? null : Math.round(Number(v.price)) };
+        return { options: { size: s, color: colour }, stock: v.available ? UNLIMITED_STOCK : 0, price: Math.round(Number(v.price)) === price ? null : Math.round(Number(v.price)) };
       }),
     );
     if (!variants.ok) throw new Error(`${code}: ${variants.error}`);
@@ -250,6 +260,7 @@ async function main() {
           compareAtPrice,
           stock: 0,
           showStockCount: false,
+          unlimitedStock: true,
           categoryId: category.id,
           vendorId: store!.id,
           approvalStatus: ProductApprovalStatus.APPROVED,

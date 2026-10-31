@@ -117,6 +117,7 @@ export async function POST(req: Request) {
     quantity: number;
     taxBps: number;
     commissionBps: number;
+    unlimited: boolean;
   }[] = [];
   for (const item of cart.items) {
     const p = item.product;
@@ -153,6 +154,7 @@ export async function POST(req: Request) {
     lines.push({
       productId: p.id,
       vendorId: p.vendorId,
+      unlimited: p.unlimitedStock,
       title: label ? `${p.name} (${label})` : p.name,
       variantId: item.variant?.id ?? null,
       variantLabel: label,
@@ -216,10 +218,12 @@ export async function POST(req: Request) {
       // Conditional decrement: the row lock makes concurrent checkouts serialize here,
       // so stock can never go below zero.
       for (const line of lines) {
+        // Unlimited stock: nothing to reserve (the stock stays at UNLIMITED_STOCK).
+        const take = line.unlimited ? 0 : line.quantity;
         if (line.variantId) {
           const variantReserved = await tx.productVariant.updateMany({
-            where: { id: line.variantId, stock: { gte: line.quantity } },
-            data: { stock: { decrement: line.quantity } },
+            where: { id: line.variantId, stock: { gte: take } },
+            data: { stock: { decrement: take } },
           });
           if (variantReserved.count === 0) {
             throw new CheckoutError(`Insufficient stock for ${line.title}`);
@@ -228,13 +232,13 @@ export async function POST(req: Request) {
         const reserved = await tx.product.updateMany({
           where: {
             id: line.productId,
-            stock: { gte: line.quantity },
+            stock: { gte: take },
             approvalStatus: "APPROVED",
             availableForSale: true,
             // Re-checked inside the transaction: a vendor suspended mid-checkout can't sell.
             vendor: sellableVendorWhere,
           },
-          data: { stock: { decrement: line.quantity } },
+          data: { stock: { decrement: take } },
         });
         if (reserved.count === 0) {
           throw new CheckoutError(`Insufficient stock for ${line.title}`);

@@ -132,6 +132,9 @@ export async function validateAttributes(
   return { ok: true, metadata: out };
 }
 
+/** Stock held by products with unlimitedStock, so every "is it available" check passes. */
+export const UNLIMITED_STOCK = 9999;
+
 export const variantsInputSchema = z
   .array(
     z.object({

@@ -20,6 +20,7 @@ type Product = {
   isPopular: boolean;
   featuredPriority: number;
   stock: number;
+  unlimitedStock: boolean;
   images: { url: string }[];
   category: { name: string };
   salesPerson: { user: { name: string | null; email: string } } | null;
@@ -307,7 +308,7 @@ function ProductsList() {
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{p.name}</p>
               <p className="text-xs text-zinc-500">
-                {p.vendor.storeName} ({p.vendor.market}) · {p.category.name} · stock {p.stock} · Sales:{" "}
+                {p.vendor.storeName} ({p.vendor.market}) · {p.category.name} · stock {p.unlimitedStock ? "unlimited" : p.stock} · Sales:{" "}
                 {p.salesPerson?.user.name ?? p.salesPerson?.user.email ?? "—"}
               </p>
               <p className="text-xs">

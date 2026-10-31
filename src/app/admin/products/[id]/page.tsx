@@ -16,6 +16,7 @@ type Product = {
   basePrice: string;
   salesTaxBps: number;
   stock: number;
+  unlimitedStock: boolean;
   sku: string | null;
   featuredPriority: number;
   zoneTags: string[];
@@ -170,7 +171,7 @@ export default function AdminProductPage() {
                 <dt className="text-zinc-500">{m.taxName} included</dt>
                 <dd>{product.vendor.taxRegNo ? `${product.salesTaxBps / 100}%` : "none (vendor not registered)"}</dd>
                 <dt className="text-zinc-500">Stock</dt>
-                <dd>{product.stock}</dd>
+                <dd>{product.unlimitedStock ? "Unlimited" : product.stock}</dd>
                 <dt className="text-zinc-500">SKU</dt>
                 <dd>{product.sku ?? "—"}</dd>
                 <dt className="text-zinc-500">Status</dt>
@@ -210,7 +211,7 @@ export default function AdminProductPage() {
                       <li key={JSON.stringify(v.options)} className="flex justify-between gap-2 px-2 py-1">
                         <span>{variantLabel(v.options, Object.fromEntries(attrs.map((a) => [a.key, a.name])))}</span>
                         <span className={v.stock > 0 ? "text-zinc-600" : "text-red-600"}>
-                          {v.stock} in stock
+                          {product.unlimitedStock ? "Unlimited" : `${v.stock} in stock`}
                           {v.price != null ? ` · ${formatMoney(product.vendor.market, v.price)}` : ""}
                         </span>
                       </li>

@@ -52,10 +52,14 @@ async function reverseOrderLedger(tx: Prisma.TransactionClient, orderId: string)
 async function restock(tx: Prisma.TransactionClient, orderId: string) {
   const items = await tx.orderItem.findMany({ where: { orderId } });
   for (const item of items) {
-    await tx.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } });
+    // Unlimited-stock products weren't decremented at checkout.
+    await tx.product.updateMany({ where: { id: item.productId, unlimitedStock: false }, data: { stock: { increment: item.quantity } } });
     // updateMany: the variant may have been removed since.
     if (item.variantId) {
-      await tx.productVariant.updateMany({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } });
+      await tx.productVariant.updateMany({
+        where: { id: item.variantId, product: { unlimitedStock: false } },
+        data: { stock: { increment: item.quantity } },
+      });
     }
   }
 }
