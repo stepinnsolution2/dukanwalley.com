@@ -243,6 +243,8 @@ const SIZE_WORDS: Record<string, string> = {
  * "Unstitched", "all yards" → "Free Size". Anything else is kept as written ("100cm").
  */
 export function normalizeSize(raw: string) {
+  // Before the weight strip below, which would cut "Gazz 2.5" down to "Gazz".
+  if (isLength(raw.replace(/\[[^\]]*\]|\([^)]*\)/g, " ").trim().replace(/\s+/g, " "))) return "Unstitched";
   let v = raw
     .replace(/\[[^\]]*\]|\([^)]*\)/g, " ")
     .replace(/\s*\/\s*\d+.*$/, "") // "L/175", "3XL/190"
