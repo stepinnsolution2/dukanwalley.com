@@ -110,6 +110,12 @@ export default async function AdminOrderPage({ params }: Props) {
               </p>
             </div>
           ) : null}
+          {order.freeGift ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900 sm:col-span-2">
+              <h2 className="font-semibold">🎁 Free gift</h2>
+              <p className="text-sm">This order reached the free-gift amount when it was placed. Put a gift in the parcel.</p>
+            </div>
+          ) : null}
           <div>
             <h2 className="font-semibold">Payment</h2>
             <p>

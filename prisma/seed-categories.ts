@@ -8,7 +8,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { slugify } from "../src/lib/slug";
 
 type Attr = { key: string; name: string; dataType: string; required: boolean; options?: string[]; isVariant?: boolean };
-type Sub = { name: string; slug?: string; description: string; attributes?: Attr[] };
+type Sub = { name: string; slug?: string; description: string; attributes?: Attr[]; children?: Sub[] };
 type Cat = { name: string; slug: string; description: string; attributes?: Attr[]; children: Sub[] };
 
 const color: Attr = { key: "color", name: "Color", dataType: "text", required: false, isVariant: true };
@@ -200,12 +200,72 @@ export const CATEGORIES: Cat[] = [
     slug: "jewellery-watches",
     description:
       "Earrings, necklace sets, rings, bangles and bracelets, plus watches for men and women. Most fashion jewellery is artificial; each listing states the material, so check it before you buy.",
-    attributes: [material, color],
+    attributes: [
+      material,
+      color,
+      // Ring sizes (16–20), bangle sizes (2.4–2.10) or Adjustable.
+      { key: "size", name: "Size", dataType: "text", required: false, isVariant: true },
+    ],
     children: [
-      { name: "Earrings", slug: "jewellery-watches-earrings", description: "Studs, jhumkas, hoops and drop earrings for daily wear and occasions." },
-      { name: "Necklaces & Sets", slug: "jewellery-watches-necklaces-sets", description: "Necklaces, chokers and jewellery sets, including bridal and party sets." },
+      {
+        name: "Earrings",
+        slug: "jewellery-watches-earrings",
+        description: "Studs, jhumkas, hoops and drop earrings for daily wear and occasions.",
+        children: [
+          { name: "Ear Studs", slug: "jewellery-watches-earrings-studs", description: "Small studs and tops for everyday wear, in zircon, pearl and gold or silver tones." },
+          { name: "Jhumka", slug: "jewellery-watches-earrings-jhumka", description: "Traditional bell-shaped jhumkas and jhumkis for weddings, Eid and festive outfits." },
+          { name: "Bali & Hoops", slug: "jewellery-watches-earrings-bali-hoops", description: "Bali and hoop earrings, from slim daily hoops to statement bali." },
+          { name: "Bindiya Kanta", slug: "jewellery-watches-earrings-bindiya-kanta", description: "Kanta earrings with a matching hair chain (sahara), for brides and formal wear." },
+        ],
+      },
+      {
+        name: "Necklaces & Sets",
+        slug: "jewellery-watches-necklaces-sets",
+        description: "Necklaces, chokers and jewellery sets, including bridal and party sets.",
+        children: [
+          { name: "Necklaces", slug: "jewellery-watches-necklaces", description: "Necklaces and necklace sets with matching earrings for parties and daily wear." },
+          { name: "Choker Sets", slug: "jewellery-watches-choker-sets", description: "Kundan, pearl and Turkish choker sets, usually with matching earrings." },
+          { name: "Rani Mala Sets", slug: "jewellery-watches-mala-sets", description: "Long rani haar and mala sets for weddings and formal occasions." },
+          { name: "Bridal Sets", slug: "jewellery-watches-bridal-sets", description: "Complete bridal jewellery sets for barat, walima and mehndi." },
+        ],
+      },
       { name: "Rings", slug: "jewellery-watches-rings", description: "Rings in different styles and sizes; check the size or whether a ring is adjustable." },
-      { name: "Bangles & Bracelets", slug: "jewellery-watches-bangles-bracelets", description: "Bangles, kangans and bracelets, sold as single pieces or sets." },
+      {
+        name: "Bangles & Bracelets",
+        slug: "jewellery-watches-bangles-bracelets",
+        description: "Bangles, kangans and bracelets, sold as single pieces or sets.",
+        children: [
+          { name: "Bangles", slug: "jewellery-watches-bangles", description: "Bangles and churiyan in sets, by size (2.4 to 2.10) or adjustable." },
+          { name: "Kara Pairs", slug: "jewellery-watches-kara", description: "Kara and karay pairs, including openable and Turkish designs." },
+          { name: "Bracelets", slug: "jewellery-watches-bracelets", description: "Chain, charm, tennis and adjustable bracelets for women and men." },
+        ],
+      },
+      {
+        name: "Pendants & Lockets",
+        slug: "jewellery-watches-pendants-lockets",
+        description: "Pendants on chains and locket sets, including name, alphabet and Islamic calligraphy designs.",
+        children: [
+          { name: "Pendants & Chains", slug: "jewellery-watches-pendants-chains", description: "Pendants, chains and stainless steel chains for women and men." },
+          { name: "Locket Sets", slug: "jewellery-watches-locket-sets", description: "Lockets on a chain with matching earrings, from simple daily sets to zircon party sets." },
+        ],
+      },
+      { name: "Anklets", slug: "jewellery-watches-anklets", description: "Anklets and payal (pazaib), sold as single pieces or pairs." },
+      {
+        name: "Bridal Accessories",
+        slug: "jewellery-watches-bridal-accessories",
+        description: "Jhoomer, matha patti, bindiya and nath to complete a bridal or festive look.",
+        children: [
+          { name: "Jhoomer", slug: "jewellery-watches-jhoomer", description: "Side jhoomer (passa) for brides and formal hairstyles." },
+          { name: "Matha Patti", slug: "jewellery-watches-matha-patti", description: "Matha patti and head chains for weddings and Eid." },
+          { name: "Bindiya", slug: "jewellery-watches-bindiya", description: "Forehead bindiya (tikka) in kundan, pearl and zircon." },
+          { name: "Nose Rings", slug: "jewellery-watches-nose-rings", description: "Nath and nose rings, including clip-on styles that need no piercing." },
+        ],
+      },
+      {
+        name: "Hair Accessories",
+        slug: "jewellery-watches-hair-accessories",
+        description: "Hair clips, pins, bands, scrunchies and ponytail accessories.",
+      },
       {
         name: "Men's Watches",
         slug: "jewellery-watches-mens-watches",
@@ -354,7 +414,12 @@ export const CATEGORIES: Cat[] = [
 
 /** Every slug the tree defines (parents and subcategories). */
 export function categoryTreeSlugs() {
-  return CATEGORIES.flatMap((c) => [c.slug, ...c.children.map((s) => s.slug ?? `${c.slug}-${slugify(s.name)}`)]);
+  const walk = (parent: string, subs: Sub[]): string[] =>
+    subs.flatMap((s) => {
+      const slug = s.slug ?? `${parent}-${slugify(s.name)}`;
+      return [slug, ...walk(slug, s.children ?? [])];
+    });
+  return CATEGORIES.flatMap((c) => [c.slug, ...walk(c.slug, c.children)]);
 }
 
 async function upsertCategory(
@@ -390,16 +455,16 @@ export async function seedCategories(prisma: PrismaClient) {
   for (const [i, c] of CATEGORIES.entries()) {
     const parent = await upsertCategory(prisma, { name: c.name, slug: c.slug, description: c.description, homeOrder: (i + 1) * 10 });
     await ensureAttributes(prisma, parent.id, c.attributes);
-    // Subcategories inherit the parent's fields; slugs are parent-prefixed (shoes-men).
-    for (const s of c.children) {
-      const child = await upsertCategory(prisma, {
-        name: s.name,
-        slug: s.slug ?? `${c.slug}-${slugify(s.name)}`,
-        description: s.description,
-        parentId: parent.id,
-      });
-      await ensureAttributes(prisma, child.id, s.attributes);
-    }
+    // Subcategories (and theirs) inherit the parent's fields; slugs are parent-prefixed (shoes-men).
+    const children = async (parentSlug: string, parentId: string, subs: Sub[]) => {
+      for (const s of subs) {
+        const slug = s.slug ?? `${parentSlug}-${slugify(s.name)}`;
+        const child = await upsertCategory(prisma, { name: s.name, slug, description: s.description, parentId });
+        await ensureAttributes(prisma, child.id, s.attributes);
+        await children(slug, child.id, s.children ?? []);
+      }
+    };
+    await children(c.slug, parent.id, c.children);
   }
 }
 

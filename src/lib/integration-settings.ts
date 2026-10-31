@@ -92,13 +92,14 @@ export function validateIntegrationValue(key: string, value: string): string | n
     return "Easypaisa hash key must be 16, 24 or 32 characters";
   }
   if (key === "GA_MEASUREMENT_ID" && !/^G-[A-Z0-9]{4,20}$/.test(value)) return "Looks like G-XXXXXXXXXX";
+  if (key === "FREE_GIFT_MIN_ORDER" && !/^\d{1,7}$/.test(value)) return "Amount in rupees, e.g. 2500";
   if (key === "MARKETING_DAILY_LIMIT" && !/^\d{1,6}$/.test(value)) return "A whole number, e.g. 80";
   if (/_SITE_VERIFICATION$/.test(key) && !/^[A-Za-z0-9_-]{10,120}$/.test(value)) return "Paste the code from the verification tag";
   if (key === "SMTP_PORT" && !/^\d{2,5}$/.test(value)) return "Port must be a number, e.g. 465 or 587";
   if (key === "JAZZCASH_INQUIRY_URL" && !/^https:\/\/\S+$/.test(value)) return "Must be an https:// URL";
   if (key === "ANTHROPIC_API_KEY" && !/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(value)) return "Anthropic keys start with sk-ant-";
   if (key === "AI_DESCRIPTION_MODEL" && !/^claude-[a-z0-9-]+$/.test(value)) return "Choose a model";
-  if (value.length > (key === "COD_CHECKOUT_NOTE" ? 1000 : 500)) return "Too long";
+  if (value.length > (key === "COD_CHECKOUT_NOTE" || key === "POPUP_TEXT" ? 1000 : 500)) return "Too long";
   return null;
 }
 

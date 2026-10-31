@@ -67,6 +67,24 @@ export const INTEGRATION_GROUPS: readonly IntegrationGroup[] = [
         help: "A small box in the corner inviting shoppers to join for deals. Shown at most once every 14 days, never at checkout or to signed-in customers.",
       },
       {
+        key: "FREE_GIFT_MIN_ORDER",
+        label: "Free gift on orders above (Rs)",
+        placeholder: "2500",
+        help: "Pakistan orders whose items reach this amount are marked 🎁 Free gift in Orders, so a gift goes in the parcel. The sign-up box becomes a large pop-up announcing the offer, and cart and checkout show how much more to add. Leave empty for no gift offer.",
+      },
+      {
+        key: "POPUP_HEADLINE",
+        label: "Pop-up headline",
+        defaultValue: "Free gift on orders above Rs {amount}",
+        help: "{amount} is replaced with the free-gift amount.",
+      },
+      {
+        key: "POPUP_TEXT",
+        label: "Pop-up text",
+        multiline: true,
+        defaultValue: "Join DukanWalley with your email: be first to hear about sales and new arrivals, and remember that every order above Rs {amount} comes with a free gift.",
+      },
+      {
         key: "CART_REMINDERS",
         label: "Cart reminder emails",
         options: ON_OFF,

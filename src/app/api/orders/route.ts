@@ -1,3 +1,4 @@
+import { freeGiftMinOrder } from "@/lib/marketing";
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -177,6 +178,9 @@ export async function POST(req: Request) {
       : 0;
   const pointsDiscountCents = pointsValueMinor(market, pointsRedeemed);
   const totalCents = grossCents + shippingCents - pointsDiscountCents;
+  // Admin › Settings › Email marketing: items worth this much earn a free gift in the parcel.
+  const giftMin = await freeGiftMinOrder(market);
+  const freeGift = giftMin !== null && grossCents >= giftMin * 100;
 
   let order;
   try {
@@ -197,6 +201,7 @@ export async function POST(req: Request) {
           shipping: fromCents(shippingCents),
           pointsRedeemed,
           pointsDiscount: fromCents(pointsDiscountCents),
+          freeGift,
           total: fromCents(totalCents),
           shippingAddress: { ...shippingAddress, country: market },
           items: {

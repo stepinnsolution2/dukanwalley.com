@@ -150,6 +150,11 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
                   <Link href={`/admin/orders/${o.id}`} className="font-mono text-xs text-teal-800 hover:underline">
                     {o.orderNumber}
                   </Link>
+                  {o.freeGift ? (
+                    <span title="Free gift: put a gift in the parcel" className="ml-1">
+                      🎁
+                    </span>
+                  ) : null}
                   <span className="block text-xs text-zinc-500">
                     {o.market} · {o.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
                   </span>

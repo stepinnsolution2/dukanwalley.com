@@ -17,7 +17,7 @@ export class DescriptionError extends Error {}
 const DEFAULT_MODEL = "claude-sonnet-5-5";
 const MAX_IMAGES = 3;
 /** Words that must never reach shoppers: suppliers we import from. */
-const BLOCKED = [/markaz/i];
+const BLOCKED = [/markaz/i, /rawayat/i, /روایت/, /haseeb\s*sarwar/i];
 
 export async function aiDescriptionsConfigured() {
   return !!(await integrationSettings()).ANTHROPIC_API_KEY;

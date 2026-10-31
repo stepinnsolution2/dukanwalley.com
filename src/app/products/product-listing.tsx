@@ -234,9 +234,15 @@ export async function ProductListing({ sp }: { sp: SP }) {
   const direct = new Map(counts.map((c) => [c.categoryId, c._count._all]));
   const countFor = (id: string) =>
     categoryAndDescendantIds(id, categories).reduce((s, cid) => s + (direct.get(cid) ?? 0), 0);
-  const openRootId = current ? (current.parentId ?? current.id) : undefined;
-  // Empty categories stay out of the menu (the one being viewed, and its parent, always show).
-  const shown = (id: string) => countFor(id) > 0 || id === current?.id || id === openRootId;
+  // The viewed category and its parents, root first: these are open in the menu.
+  const ancestors: typeof categories = [];
+  for (let c = current ? categories.find((x) => x.id === current.id) : undefined, n = 0; c && n < 6; n++) {
+    ancestors.unshift(c);
+    c = c.parentId ? categories.find((x) => x.id === c!.parentId) : undefined;
+  }
+  const openIds = new Set(ancestors.map((c) => c.id));
+  // Empty categories stay out of the menu (the one being viewed, and its parents, always show).
+  const shown = (id: string) => countFor(id) > 0 || openIds.has(id);
   const roots = categories.filter((c) => !c.parentId && shown(c.id));
   const childrenOf = (id: string) => categories.filter((c) => c.parentId === id && shown(c.id));
 
@@ -256,13 +262,29 @@ export async function ProductListing({ sp }: { sp: SP }) {
     listingHref({ ...sp, page: undefined, ...changes });
   // Filter and sort forms submit to the listing they're on; the category is in the path.
   const formAction = current ? `/category/${encodeURIComponent(current.slug)}` : "/products";
-  const parentCategory = current?.parentId ? categories.find((c) => c.id === current.parentId) : undefined;
   const crumbs: Crumb[] = [
     { name: "Home", path: "/" },
     { name: "All products", path: "/products" },
-    ...(parentCategory ? [{ name: parentCategory.name, path: `/category/${parentCategory.slug}` }] : []),
-    ...(current ? [{ name: current.name, path: `/category/${current.slug}` }] : []),
+    ...ancestors.map((c) => ({ name: c.name, path: `/category/${c.slug}` })),
   ];
+  /** Subcategories of an open category, nested as deep as the tree goes. */
+  const subMenu = (parentId: string): React.ReactNode =>
+    openIds.has(parentId) && childrenOf(parentId).length ? (
+      <ul className="ml-3 border-l border-zinc-200 pl-2">
+        {childrenOf(parentId).map((c) => (
+          <li key={c.id}>
+            <Link
+              href={href({ category: c.slug })}
+              className={`flex justify-between rounded px-2 py-1 ${current?.id === c.id ? "bg-teal-50 font-semibold text-teal-900" : "hover:bg-zinc-100"}`}
+            >
+              <span>{c.name}</span>
+              <span className="text-xs text-zinc-400">{countFor(c.id)}</span>
+            </Link>
+            {subMenu(c.id)}
+          </li>
+        ))}
+      </ul>
+    ) : null;
 
   const activeChips = [
     ...(collection ? [{ label: collection.label, href: href({ collection: undefined }) }] : []),
@@ -308,21 +330,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
                 <span>{r.name}</span>
                 <span className="text-xs text-zinc-400">{countFor(r.id)}</span>
               </Link>
-              {openRootId === r.id && childrenOf(r.id).length ? (
-                <ul className="ml-3 border-l border-zinc-200 pl-2">
-                  {childrenOf(r.id).map((c) => (
-                    <li key={c.id}>
-                      <Link
-                        href={href({ category: c.slug })}
-                        className={`flex justify-between rounded px-2 py-1 ${current?.id === c.id ? "bg-teal-50 font-semibold text-teal-900" : "hover:bg-zinc-100"}`}
-                      >
-                        <span>{c.name}</span>
-                        <span className="text-xs text-zinc-400">{countFor(c.id)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+              {subMenu(r.id)}
             </li>
           ))}
         </ul>

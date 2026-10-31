@@ -100,6 +100,26 @@ export async function marketingSettings(): Promise<MarketingSettings> {
   };
 }
 
+export const POPUP_HEADLINE_DEFAULT = "Free gift on orders above Rs {amount}";
+export const POPUP_TEXT_DEFAULT =
+  "Join DukanWalley with your email: be first to hear about sales and new arrivals, and remember that every order above Rs {amount} comes with a free gift.";
+
+/** Items total (Pakistan, in rupees) that earns a free gift; null when there is no offer. */
+export async function freeGiftMinOrder(market: MarketCode): Promise<number | null> {
+  if (market !== "PK") return null;
+  const n = Number((await integrationSettings()).FREE_GIFT_MIN_ORDER ?? "");
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** The sign-up pop-up's offer wording, or null for the plain sign-up box. */
+export async function popupOffer(): Promise<{ amount: number; headline: string; text: string } | null> {
+  const s = await integrationSettings();
+  const amount = Number(s.FREE_GIFT_MIN_ORDER ?? "");
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const fill = (t: string) => t.replace(/\{amount\}/g, amount.toLocaleString("en-PK"));
+  return { amount, headline: fill(s.POPUP_HEADLINE || POPUP_HEADLINE_DEFAULT), text: fill(s.POPUP_TEXT || POPUP_TEXT_DEFAULT) };
+}
+
 /** Marketing emails (cart reminders + newsletters) still allowed today (Pakistan day). */
 export async function marketingEmailsLeftToday() {
   const { dailyLimit } = await marketingSettings();

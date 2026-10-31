@@ -435,6 +435,8 @@ model Order {
   /// Reward points spent on this order and the discount they gave (funded by the platform).
   pointsRedeemed  Int           @default(0)
   pointsDiscount  Decimal       @db.Decimal(12, 2) @default(0)
+  /// Order reached the free-gift amount (Admin › Settings › Email marketing) when it was placed: pack a gift.
+  freeGift        Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { FreeGiftBar } from "@/components/free-gift-bar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -63,6 +64,7 @@ export default function CheckoutPage() {
   const [market, setMarket] = useState<MarketCode>(DEFAULT_MARKET);
   const [methods, setMethods] = useState<MarketPaymentMethod[]>(["CASH_ON_DELIVERY"]);
   const [codNote, setCodNote] = useState<string | null>(null);
+  const [giftMin, setGiftMin] = useState<number | null>(null);
   const [email, setEmail] = useState("");
   const [offers, setOffers] = useState(true);
   const [phone, setPhone] = useState("");
@@ -91,6 +93,7 @@ export default function CheckoutPage() {
       if (j.market) setMarket(j.market);
       if (j.paymentMethods?.length) setMethods(j.paymentMethods);
       setCodNote(j.codNote ?? null);
+      setGiftMin(j.freeGiftMin ?? null);
       if (j.cart?.guestEmail) setEmail(j.cart.guestEmail);
       if (j.cart?.guestPhone) setPhone(j.cart.guestPhone);
       if (j.rewards) setRewards(j.rewards);
@@ -260,6 +263,7 @@ export default function CheckoutPage() {
             </span>
           </label>
         ) : null}
+        <FreeGiftBar market={market} itemsTotal={itemsMinor / 100} min={giftMin} />
         {itemsMinor > 0 ? (
           <dl className="space-y-1 rounded-lg border border-zinc-200 bg-white p-3 text-sm">
             <div className="flex justify-between">

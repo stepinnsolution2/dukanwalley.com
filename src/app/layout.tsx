@@ -4,6 +4,7 @@ import Script from "next/script";
 import { EmailCapture } from "@/components/email-capture";
 import { Providers } from "@/components/providers";
 import { integrationSettings } from "@/lib/integration-settings";
+import { popupOffer } from "@/lib/marketing";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
@@ -59,7 +60,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900">
         <Providers>
           {children}
-          <EmailCapture enabled={settings.EMAIL_POPUP !== "off"} />
+          <EmailCapture enabled={settings.EMAIL_POPUP !== "off"} offer={await popupOffer()} />
         </Providers>
         {ga ? (
           <>
