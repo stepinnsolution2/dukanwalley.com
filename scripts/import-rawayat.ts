@@ -13,7 +13,7 @@ import "dotenv/config";
 import { randomBytes } from "crypto";
 import { prisma } from "../src/lib/db";
 import { slugify } from "../src/lib/slug";
-import { saveUpload } from "../src/lib/storage";
+import { deleteStoredMedia, saveUpload } from "../src/lib/storage";
 import { integrationSettings } from "../src/lib/integration-settings";
 import { uniqueVendorSlug } from "../src/lib/vendor-slug";
 import { syncProductVariants, UNLIMITED_STOCK, validateVariants } from "../src/lib/catalog";
@@ -38,6 +38,14 @@ const NO_SCAN = !!arg("no-scan");
 const LIMIT = Number(arg("limit=")?.split("=")[1] ?? 0);
 /** Testing: read saved feed pages (p1.json, p2.json, …) from this folder instead of the site. */
 const FEED_DIR = arg("feed-dir=")?.split("=").slice(1).join("=");
+/**
+ * Without an API key, photos are checked by eye instead: --list-photos=FILE (with --dry-run) writes
+ * every photo to review; --review=FILE ({"logo": [photo URLs]}) then drops those photos and
+ * publishes each product that keeps at least one clean photo.
+ */
+const LIST_PHOTOS = arg("list-photos=")?.split("=").slice(1).join("=");
+const REVIEW_FILE = arg("review=")?.split("=").slice(1).join("=");
+const plainSrc = (src: string) => src.split("?")[0];
 
 type ShopifyVariant = { id: number; title: string; option1: string | null; option2: string | null; option3: string | null; price: string; compare_at_price: string | null; available: boolean };
 type ShopifyProduct = {
@@ -338,10 +346,42 @@ function groupDesigns(feed: ShopifyProduct[]) {
   return [...groups.values()];
 }
 
+let logoPhotos: Set<string> | null = null;
+const photoList: { key: string; name: string; photos: string[] }[] = [];
+
+/** Drops reviewed logo photos from a hidden product and publishes it if a clean photo is left. */
+async function applyReview(productId: string) {
+  const p = await prisma.product.findUnique({ where: { id: productId }, include: { images: { orderBy: { sortOrder: "asc" } } } });
+  const meta = (p?.metadata ?? {}) as { photosChecked?: boolean; photoSources?: string[] };
+  if (!p || meta.photosChecked || !meta.photoSources) return;
+  const bad = p.images.filter((_, i) => logoPhotos!.has(meta.photoSources![i] ?? ""));
+  const keep = p.images.filter((img) => !bad.includes(img));
+  await prisma.$transaction(async (tx) => {
+    if (bad.length) await tx.productImage.deleteMany({ where: { id: { in: bad.map((b) => b.id) } } });
+    for (const [i, img] of keep.entries()) await tx.productImage.update({ where: { id: img.id }, data: { sortOrder: i } });
+    await tx.product.update({
+      where: { id: p.id },
+      data: {
+        displayOnStorefront: keep.length > 0,
+        metadata: { ...meta, photosChecked: true, photoSources: meta.photoSources!.filter((src) => !logoPhotos!.has(src)) },
+      },
+    });
+  });
+  for (const b of bad) await deleteStoredMedia(b.url).catch(() => null);
+  reviewStats[keep.length ? "published" : "hidden"] += 1;
+  reviewStats.photosRemoved += bad.length;
+}
+const reviewStats = { published: 0, hidden: 0, photosRemoved: 0 };
+
 async function main() {
   const settings = await integrationSettings();
-  const apiKey = NO_SCAN ? null : (settings.ANTHROPIC_API_KEY ?? null);
-  if (!apiKey && !NO_SCAN && !DRY) {
+  if (REVIEW_FILE) {
+    const { readFileSync } = await import("fs");
+    logoPhotos = new Set((JSON.parse(readFileSync(REVIEW_FILE, "utf8")) as { logo: string[] }).logo.map(plainSrc));
+    console.log(`review: ${logoPhotos.size} photos marked as showing the logo`);
+  }
+  const apiKey = NO_SCAN || logoPhotos ? null : (settings.ANTHROPIC_API_KEY ?? null);
+  if (!apiKey && !NO_SCAN && !DRY && !logoPhotos) {
     throw new Error("Add the Anthropic API key in Admin › Settings › AI first (photos must be checked for the supplier's logo), or run with --no-scan to create hidden test products.");
   }
 
@@ -405,6 +445,7 @@ async function main() {
 
     const existing = await prisma.product.findUnique({ where: { source_sourceRef: { source: SOURCE, sourceRef: g.key } } });
     if (existing) {
+      if (!DRY && logoPhotos) await applyReview(existing.id);
       if (!DRY) {
         await prisma.$transaction(async (tx) => {
           await tx.product.update({
@@ -428,6 +469,7 @@ async function main() {
       return;
     }
     const sources = [...new Set(g.products.flatMap((p) => p.images.map((i) => i.src)))].slice(0, MAX_IMAGES);
+    if (LIST_PHOTOS) photoList.push({ key: g.key, name, photos: sources.map(plainSrc) });
     if (DRY) {
       if (counts.created < 15) console.log(`\n=== ${name} | ${categorySlug} | Rs ${price}${compareAtPrice ? ` (was ${was})` : ""} | ${colours.join(", ") || "-"} | ${sizes.join(", ") || "-"} | ${sources.length} photos\n${describe(name, categorySlug!, g.products[0], colours, sizes)}`);
       counts.created += 1;
@@ -435,10 +477,15 @@ async function main() {
     }
 
     const imageUrls: string[] = [];
+    const photoSources: string[] = [];
     for (const src of sources) {
+      if (logoPhotos?.has(plainSrc(src))) continue;
       try {
         const url = await importPhoto(src, apiKey);
-        if (url) imageUrls.push(url);
+        if (url) {
+          imageUrls.push(url);
+          photoSources.push(plainSrc(src));
+        }
       } catch (e) {
         stats.failed += 1;
         console.log(`  photo failed (${(e as Error).message}): ${src.split("?")[0]}`);
@@ -466,9 +513,15 @@ async function main() {
           approvalStatus: ProductApprovalStatus.APPROVED,
           approvedAt: new Date(),
           // Photos not checked for the supplier's logo stay off the shop.
-          displayOnStorefront: !!apiKey,
+          displayOnStorefront: !!apiKey || !!logoPhotos,
           availableForSale: anyAvailable,
-          metadata: { ...(mats.length ? { material: mats.join(", ") } : {}), ...(!useVariants && colours[0] ? { color: colours[0] } : {}), photosChecked: !!apiKey },
+          metadata: {
+            ...(mats.length ? { material: mats.join(", ") } : {}),
+            ...(!useVariants && colours[0] ? { color: colours[0] } : {}),
+            photosChecked: !!apiKey || !!logoPhotos,
+            // Where each photo came from (same order as images), for a later review.
+            photoSources,
+          },
           source: SOURCE,
           sourceRef: g.key,
           images: { create: imageUrls.map((url, i) => ({ url, sortOrder: i })) },
@@ -489,7 +542,12 @@ async function main() {
     counts.removed = gone.count;
   }
 
-  console.log(`\ndone: ${JSON.stringify(counts)} · photos ${JSON.stringify(stats)}`);
+  console.log(`\ndone: ${JSON.stringify(counts)} · photos ${JSON.stringify(stats)}${logoPhotos ? ` · review ${JSON.stringify(reviewStats)}` : ""}`);
+  if (LIST_PHOTOS) {
+    const { writeFileSync } = await import("fs");
+    writeFileSync(LIST_PHOTOS, JSON.stringify(photoList));
+    console.log(`wrote ${photoList.length} designs to ${LIST_PHOTOS}`);
+  }
   if (skippedTypes.size) {
     console.log("not imported (no matching category):");
     for (const [k, n] of [...skippedTypes].sort((a, b) => b[1] - a[1]).slice(0, 30)) console.log(`  ${n} × ${k}`);
