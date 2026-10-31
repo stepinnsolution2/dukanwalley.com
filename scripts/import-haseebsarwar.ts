@@ -3,10 +3,10 @@
 // names and descriptions are written here from the product facts, not copied. Colours missing
 // from their descriptions were read from the photos.
 //
-// Products are created HIDDEN (not on the storefront): the supplier's photos carry their logo and
-// collar label, and shoppers must only ever see the store as PUBLIC_NAME. Publish them once clean
-// photos (or the supplier's OK to cover the logo) are in. Their size-chart image names them, so
-// it is never copied; its measurements are written into each description instead.
+// Shoppers must only ever see the store as PUBLIC_NAME, so the supplier's marks are painted out of
+// every photo before it is saved (see haseebsarwar-marks.ts; a photo with no entry there is not
+// used). Their size-chart image names them, so it is never copied; its measurements are written
+// into each description instead.
 //
 // Re-running refreshes prices and "was" prices of products already imported.
 //
@@ -16,6 +16,8 @@ import { randomBytes } from "crypto";
 import { prisma } from "../src/lib/db";
 import { slugify } from "../src/lib/slug";
 import { saveUpload } from "../src/lib/storage";
+import { coverMarks } from "./cover-marks";
+import { MARKS } from "./haseebsarwar-marks";
 import { uniqueVendorSlug } from "../src/lib/vendor-slug";
 import { syncProductVariants, validateVariants } from "../src/lib/catalog";
 import { Prisma } from "../src/generated/prisma/client";
@@ -167,14 +169,16 @@ async function ensureStore() {
   return user.vendorProfile!;
 }
 
-async function download(url: string, attempts = 3): Promise<string> {
+/** Downloads a photo, paints out the supplier's marks and saves it to our storage. */
+async function download(url: string, marks: NonNullable<(typeof MARKS)[string]>, attempts = 3): Promise<string> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(45_000) });
-    if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-    return (await saveUpload(res.body, "image")).url;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const clean = await coverMarks(Buffer.from(await res.arrayBuffer()), marks);
+    return (await saveUpload(new Blob([new Uint8Array(clean)]).stream(), "image")).url;
   } catch (e) {
     if (attempts <= 1) throw e;
-    return download(url, attempts - 1);
+    return download(url, marks, attempts - 1);
   }
 }
 
@@ -220,9 +224,14 @@ async function main() {
       continue;
     }
     const imageUrls: string[] = [];
-    for (const src of sources) {
+    for (const [n, src] of sources.entries()) {
+      const marks = MARKS[`${code}_${n}`];
+      if (!marks) {
+        console.log(`  photo ${n} skipped: its marks haven't been mapped (${src.split("?")[0]})`);
+        continue;
+      }
       try {
-        imageUrls.push(await download(src));
+        imageUrls.push(await download(src, marks));
       } catch (e) {
         console.log(`  image failed (${(e as Error).message}): ${src.split("?")[0]}`);
       }
@@ -245,9 +254,8 @@ async function main() {
           vendorId: store!.id,
           approvalStatus: ProductApprovalStatus.APPROVED,
           approvedAt: new Date(),
-          // Hidden until the photos are cleared of the supplier's branding (see top).
-          displayOnStorefront: false,
-          availableForSale: false,
+          displayOnStorefront: true,
+          availableForSale: true,
           metadata: fabric ? { fabric } : {},
           source: SOURCE,
           sourceRef: code,
@@ -256,7 +264,7 @@ async function main() {
       });
       await syncProductVariants(tx, product.id, variants.variants);
     });
-    console.log(`created ${name} (Rs ${price}, ${imageUrls.length} images, hidden)`);
+    console.log(`created ${name} (Rs ${price}, ${imageUrls.length} images)`);
   }
 }
 

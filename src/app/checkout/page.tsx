@@ -62,6 +62,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [market, setMarket] = useState<MarketCode>(DEFAULT_MARKET);
   const [methods, setMethods] = useState<MarketPaymentMethod[]>(["CASH_ON_DELIVERY"]);
+  const [codNote, setCodNote] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState<Address>({
@@ -88,6 +89,7 @@ export default function CheckoutPage() {
       if (ignore) return;
       if (j.market) setMarket(j.market);
       if (j.paymentMethods?.length) setMethods(j.paymentMethods);
+      setCodNote(j.codNote ?? null);
       if (j.cart?.guestEmail) setEmail(j.cart.guestEmail);
       if (j.cart?.guestPhone) setPhone(j.cart.guestPhone);
       if (j.rewards) setRewards(j.rewards);
@@ -211,6 +213,9 @@ export default function CheckoutPage() {
             </option>
           ))}
         </select>
+        {paymentMethod === "CASH_ON_DELIVERY" && codNote ? (
+          <p className="whitespace-pre-line rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900">{codNote}</p>
+        ) : null}
         {redeemable > 0 ? (
           <label className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
             <input

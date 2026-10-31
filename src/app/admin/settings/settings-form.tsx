@@ -34,7 +34,7 @@ function GroupCard({
   configured: boolean;
 }) {
   const router = useRouter();
-  const initial = Object.fromEntries(group.fields.map((f) => [f.key, f.secret ? "" : (status[f.key]?.value ?? "")]));
+  const initial = Object.fromEntries(group.fields.map((f) => [f.key, f.secret ? "" : status[f.key]?.value || f.defaultValue || ""]));
   const [values, setValues] = useState<Record<string, string>>(initial);
   const [remove, setRemove] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
@@ -100,7 +100,7 @@ function GroupCard({
           const s = status[f.key] ?? { inAdmin: false, inEnv: false };
           const source = s.inAdmin ? "saved here" : s.inEnv ? "from server .env" : null;
           return (
-            <label key={f.key} className="block text-sm">
+            <label key={f.key} className={`block text-sm ${f.multiline ? "sm:col-span-2" : ""}`}>
               <span className="font-medium text-zinc-800">{f.label}</span>
               {source ? <span className="ml-2 text-xs text-zinc-500">({source})</span> : null}
               {f.options ? (
@@ -116,6 +116,14 @@ function GroupCard({
                     </option>
                   ))}
                 </select>
+              ) : f.multiline ? (
+                <textarea
+                  rows={4}
+                  value={values[f.key]}
+                  placeholder={f.placeholder}
+                  onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                  className={input}
+                />
               ) : (
                 <input
                   type={f.secret ? "password" : "text"}

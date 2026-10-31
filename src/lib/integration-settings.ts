@@ -97,7 +97,7 @@ export function validateIntegrationValue(key: string, value: string): string | n
   if (key === "JAZZCASH_INQUIRY_URL" && !/^https:\/\/\S+$/.test(value)) return "Must be an https:// URL";
   if (key === "ANTHROPIC_API_KEY" && !/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(value)) return "Anthropic keys start with sk-ant-";
   if (key === "AI_DESCRIPTION_MODEL" && !/^claude-[a-z0-9-]+$/.test(value)) return "Choose a model";
-  if (value.length > 500) return "Too long";
+  if (value.length > (key === "COD_CHECKOUT_NOTE" ? 1000 : 500)) return "Too long";
   return null;
 }
 

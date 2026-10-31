@@ -10,10 +10,14 @@ export type IntegrationField = {
   options?: readonly { value: string; label: string }[];
   placeholder?: string;
   help?: string;
+  /** A text box of several lines instead of a one-line input. */
+  multiline?: boolean;
+  /** Used (and shown in the form) while nothing has been saved. */
+  defaultValue?: string;
 };
 
 export type IntegrationGroup = {
-  id: "jazzcash" | "easypaisa" | "cards" | "email" | "analytics" | "ai";
+  id: "checkout" | "jazzcash" | "easypaisa" | "cards" | "email" | "analytics" | "ai";
   title: string;
   description: string;
   fields: readonly IntegrationField[];
@@ -26,7 +30,25 @@ const MODE = [
   { value: "production", label: "Production (real payments)" },
 ] as const;
 
+export const COD_NOTE_DEFAULT =
+  "COD (Cash on Delivery) is a payment option that allows the buyer to pay when the product is delivered to customer. Once the courier has received the money, only then will he give the parcel to the customer.";
+
 export const INTEGRATION_GROUPS: readonly IntegrationGroup[] = [
+  {
+    id: "checkout",
+    title: "Checkout",
+    description: "Text shown to buyers on the checkout page.",
+    fields: [
+      {
+        key: "COD_CHECKOUT_NOTE",
+        label: "Cash on Delivery note",
+        multiline: true,
+        defaultValue: COD_NOTE_DEFAULT,
+        help: "Shown under the payment choice when the buyer picks Cash on Delivery. Clear the box and save to go back to the default text; type a single - to show no note.",
+      },
+    ],
+    required: [],
+  },
   {
     id: "jazzcash",
     title: "JazzCash",

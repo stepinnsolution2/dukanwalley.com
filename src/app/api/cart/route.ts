@@ -6,6 +6,8 @@ import { getOrCreateCartOwner } from "@/lib/cart-session";
 import { getCurrentMarket } from "@/lib/market-session";
 import { MARKETS } from "@/lib/markets";
 import { availablePaymentMethods } from "@/lib/payments";
+import { COD_NOTE_DEFAULT } from "@/lib/integration-fields";
+import { integrationSettings } from "@/lib/integration-settings";
 import { toCents } from "@/lib/money";
 import { pointsForAmount } from "@/lib/reward-rules";
 import { getEarnBps, getPointsBalance } from "@/lib/rewards";
@@ -87,10 +89,13 @@ async function cartResponse(cart: LoadedCart) {
     earnPoints: pointsForAmount(market, totalMinor, await getEarnBps()),
     balance: cart.userId ? await getPointsBalance(cart.userId, market) : 0,
   };
+  // Admin › Settings › Checkout; a single "-" turns the note off.
+  const codNote = ((await integrationSettings()).COD_CHECKOUT_NOTE ?? COD_NOTE_DEFAULT).trim();
   return NextResponse.json({
     cart: { ...cart, items },
     market,
     paymentMethods: await availablePaymentMethods(market),
+    codNote: codNote === "-" ? null : codNote,
     rewards,
   });
 }
