@@ -9,7 +9,7 @@ export const BUSINESS = {
   legalName: "Dukan Walley",
   phone: "+923261283292",
   phoneDisplay: "+92 326 1283292",
-  email: "walleydukan@gmail.com",
+  email: "dukanwalley1@gmail.com",
   streetAddress: "55-LG Ashiyana Center",
   locality: "Gulberg",
   city: "Lahore",
