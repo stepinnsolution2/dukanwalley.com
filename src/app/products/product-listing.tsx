@@ -20,7 +20,8 @@ import { WasPrice } from "@/components/was-price";
 import { RatingBadge } from "@/components/stars";
 import { PAGE_WIDE } from "@/lib/page-layout";
 
-const PAGE_SIZE = 24;
+/** 12 rows of 5 on wide screens. */
+const PAGE_SIZE = 60;
 
 /** Admin-picked home page rows, browsable as full lists. */
 const COLLECTIONS: Record<string, { label: string; where: Prisma.ProductWhereInput }> = {
@@ -523,7 +524,7 @@ export async function ProductListing({ sp }: { sp: SP }) {
                 </Link>
               </div>
             ) : (
-              <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+              <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
                 {products.map((p) => {
                   const prices = p.variants.map((v) => Number(v.price ?? p.basePrice));
                   const from = prices.length ? Math.min(...prices) : Number(p.basePrice);
