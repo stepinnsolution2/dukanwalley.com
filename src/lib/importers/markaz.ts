@@ -199,6 +199,7 @@ export function placeProduct(p: MarkazProduct): Placement | null {
   if (/stitched|unstitched|sleep ?wear|night|undergarment|bra|saree|suit|kurt|shirt|trouser|dress|lawn|abaya|hijab|dupatta|shawl|clothing/.test(all)) {
     if (gender === "Kids") return kidsClothing();
     if (gender === "Men") {
+      if (/shawl|chadd?ar|stole/.test(all)) return place("mens-fashion-shawls", "mens-fashion");
       if (/unstitched|fabric/.test(all)) return place("mens-fashion-unstitched-fabric");
       if (/kurta/.test(all)) return place("mens-fashion-kurtas");
       if (/trouser|jeans|pant/.test(all)) return place("mens-fashion-trousers-jeans");
@@ -250,13 +251,20 @@ export function normalizeSize(raw: string) {
     .replace(/\s+/g, " ");
   const known = SIZE_WORDS[v.toLowerCase()];
   if (known) return known;
-  if (/^\d+(\.\d+)?\s*(m|meters?|metres?|yards?|yds?|gaz)$/i.test(v)) return "Unstitched";
+  if (isLength(v)) return "Unstitched";
   const xs = v.match(/^(x+)(s|l)$/i); // XXXXL → 4XL; up to XXXL stays letters
   if (xs && xs[1].length >= 4 && xs[2].toLowerCase() === "l") return `${xs[1].length}XL`;
   const nxl = v.match(/^([2-9])\s*xl$/i);
   if (nxl) return nxl[1] === "2" ? "XXL" : nxl[1] === "3" ? "XXXL" : `${nxl[1]}XL`;
   if (/^(x{0,3}s|m|x{0,3}l)$/i.test(v)) v = v.toUpperCase();
   return v;
+}
+
+/** A fabric length, either way round: "2.5 Meter", "3 yards", "Gazz 2.5", "2.5gaz". */
+function isLength(v: string) {
+  const unit = "(?:m|meters?|metres?|yards?|yds?|ga+z+|gu+z+)";
+  const n = "\\d+(?:\\.\\d+)?";
+  return new RegExp(`^(?:${n}\\s*${unit}|${unit}\\s*${n})$`, "i").test(v);
 }
 
 /** Sizes we recognise after normalising: letter sizes, Free Size, Unstitched, and kids' heights/ages. */
@@ -422,9 +430,17 @@ export async function importMarkazProducts(
     let variantInput: { options: Record<string, string>; stock: number; price: number | null; sku: string }[] = [];
     let problem: string | null = null;
     const parsed = p.variants.map((v) => ({ v, ...readOption(p.optionName, v.value) }));
+    // Shawls and dupattas are never stitched: a length ("2.5 Gazz") is just the one size they come in.
+    const unstitchable = /shawl|dupatta|stole|scar(f|ves)/i.test(category.name);
+    const freeSize = sizeDef
+      ? sizeDef.dataType === "select"
+        ? matchOption("Free Size", sizeDef.options)
+        : "Free Size"
+      : null;
     if (sizeDef && parsed.every((x) => x.size)) {
       variantInput = parsed.map(({ v, size: raw, color }) => {
-        const size = sizeDef.dataType === "select" ? matchOption(raw!, sizeDef.options) : raw!;
+        let size = sizeDef.dataType === "select" ? matchOption(raw!, sizeDef.options) : raw!;
+        if (size === "Unstitched" && unstitchable && freeSize) size = freeSize;
         if (!size) problem = `size "${raw}" (from "${v.value}") isn't one of ${category.name}'s sizes (${sizeDef.options.join(", ")})`;
         const shade = color ?? colour;
         return {
@@ -435,8 +451,10 @@ export async function importMarkazProducts(
         };
       });
     } else if (colorDef && parsed.every((x) => x.color)) {
+      // Colours only, in a category that needs a size too (e.g. shawls): each colour is "Free Size".
+      if (sizeDef?.required && !freeSize) problem = `${category.name} needs a size and the supplier gives none`;
       variantInput = parsed.map(({ v, color }) => ({
-        options: { [colorDef.key]: color! },
+        options: { [colorDef.key]: color!, ...(sizeDef?.required && freeSize ? { size: freeSize } : {}) },
         stock: opts.stockPerItem,
         price: v.price === basePrice ? null : v.price,
         sku: v.sku,
@@ -446,9 +464,8 @@ export async function importMarkazProducts(
     }
     // A required choice (e.g. garment size) with no supplier column: one "Free Size" option.
     if (!variantInput.length && !problem && sizeDef?.required) {
-      const free = sizeDef.dataType === "select" ? matchOption("Free Size", sizeDef.options) : "Free Size";
-      if (!free) problem = `${category.name} needs a size and the supplier gives none`;
-      else variantInput = [{ options: { size: free }, stock: opts.stockPerItem, price: null, sku: p.variants[0].sku }];
+      if (!freeSize) problem = `${category.name} needs a size and the supplier gives none`;
+      else variantInput = [{ options: { size: freeSize }, stock: opts.stockPerItem, price: null, sku: p.variants[0].sku }];
     }
     // Supplier options that read the same once normalised ("Unstitched" and "2.5 Meter") are one
     // choice: merge them when the price matches; a different price can't be guessed, so skip.

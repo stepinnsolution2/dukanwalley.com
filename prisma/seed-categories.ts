@@ -127,6 +127,11 @@ export const CATEGORIES: Cat[] = [
         slug: "mens-fashion-unstitched-fabric",
         description: "Unstitched suit fabric for men in wash & wear, cotton, khaddar and boski-style cloth, usually sold by the suit length.",
       },
+      {
+        name: "Shawls",
+        slug: "mens-fashion-shawls",
+        description: "Men's wool and pashmina-style shawls (chadar) for winter, weddings and everyday wear. Listings give the fabric, colour and length.",
+      },
     ],
   },
   {
