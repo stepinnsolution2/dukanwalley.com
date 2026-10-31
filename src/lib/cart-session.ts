@@ -105,6 +105,20 @@ async function resolveCartOwner(createSession: boolean): Promise<CartOwner | nul
 }
 
 /**
+ * Opens a guest cart in this browser (link from a cart reminder email), unless the visitor is
+ * signed in or already has a guest cart with items. Route Handlers only (sets a cookie).
+ */
+export async function adoptGuestCart(sessionId: string) {
+  if ((await auth())?.user?.id) return false;
+  const jar = await cookies();
+  const current = jar.get(CART_COOKIE)?.value;
+  if (current === sessionId) return true;
+  if (current && (await prisma.cartItem.count({ where: { cart: { sessionId: current } } }))) return false;
+  jar.set(CART_COOKIE, sessionId, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 60 });
+  return true;
+}
+
+/**
  * The signed-in user's cart key, or the guest session's. A guest cart left over
  * from before login is merged into the user's cart. Null for a guest with no cart yet.
  * Only call from Route Handlers or Server Functions (it may set cookies).

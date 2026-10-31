@@ -7,6 +7,7 @@ import type { EmailContent, EmailLine, EmailProduct, EmailSection } from "@/lib/
 import { storefrontProductWhere } from "@/lib/catalog";
 import type { CartOwner } from "@/lib/cart-session";
 import { formatMoney, PAYMENT_METHOD_LABELS, type MarketCode, type MarketPaymentMethod } from "@/lib/markets";
+import { restoreCartUrl, unsubscribeLinks } from "@/lib/marketing";
 import { isStoredMediaUrl } from "@/lib/media-url";
 import { getRecommendations, type RecommendationReason } from "@/lib/recommendations";
 import { SITE_URL } from "@/lib/seo";
@@ -30,9 +31,9 @@ const PICK_NOTES: Record<RecommendationReason, string> = {
  * Absolute image URL that mail apps can show. Our uploads are WebP, which Outlook can't
  * display, so they go through /api/email-image (a small JPEG).
  */
-export function emailImageUrl(url: string | null | undefined) {
+export function emailImageUrl(url: string | null | undefined, banner = false) {
   if (!url) return null;
-  if (isStoredMediaUrl(url)) return `${SITE_URL}/api/email-image/${url.slice("/api/media/".length)}`;
+  if (isStoredMediaUrl(url)) return `${SITE_URL}/api/email-image/${url.slice("/api/media/".length)}${banner ? "?banner=1" : ""}`;
   return /^https:\/\//.test(url) ? url : null;
 }
 
@@ -44,7 +45,7 @@ function priceText(market: MarketCode, price: number, compareAt: { toString(): s
 }
 
 /** The shopper behind an email address: their account, else the guest cart they used. */
-async function ownerFor(opts: { userId?: string | null; email?: string | null; cartId?: string | null }): Promise<CartOwner | null> {
+export async function ownerFor(opts: { userId?: string | null; email?: string | null; cartId?: string | null }): Promise<CartOwner | null> {
   if (opts.userId) return { userId: opts.userId };
   if (opts.cartId) {
     const cart = await prisma.cart.findUnique({ where: { id: opts.cartId }, select: { userId: true, sessionId: true } });
@@ -54,6 +55,13 @@ async function ownerFor(opts: { userId?: string | null; email?: string | null; c
   if (opts.email) {
     const user = await prisma.user.findUnique({ where: { email: opts.email.toLowerCase() }, select: { id: true } });
     if (user) return { userId: user.id };
+    // A guest who gave this email (sign-up box or checkout) while browsing.
+    const cart = await prisma.cart.findFirst({
+      where: { guestEmail: opts.email.toLowerCase(), sessionId: { not: null } },
+      orderBy: { updatedAt: "desc" },
+      select: { sessionId: true },
+    });
+    if (cart?.sessionId) return { sessionId: cart.sessionId };
   }
   return null;
 }
@@ -302,8 +310,37 @@ export async function buildBuyerOrderEmail(orderId: string, e: BuyerOrderEmail):
   };
 }
 
-/** Reminder for a cart left 1–7 days ago. */
-export async function buildCartReminderEmail(cartId: string, email: string): Promise<OutgoingEmail | null> {
+/** Wording for each email in the cart reminder series (see CART_REMINDER_STEPS). */
+const CART_STEP_COPY = [
+  {
+    subject: "Did you forget something?",
+    heading: "You left something in your cart",
+    intro: "We saved your cart for you. Complete your order in a minute: delivery is free and you can pay cash on delivery.",
+    after: "Questions about size or delivery? Just contact us, we're happy to help.",
+  },
+  {
+    subject: "Your picks are still waiting",
+    heading: "Still thinking it over?",
+    intro: "The items you liked are still in your cart. Here they are again, plus a few more we think you'll love.",
+    after: "Prices and stock can change, so don't wait too long.",
+  },
+  {
+    subject: "Don't miss out on your favourites",
+    heading: "Your favourites are waiting",
+    intro: "Popular items can sell out. Complete your order now so you don't miss the ones you picked.",
+    after: "Free delivery on every order · Cash on Delivery available.",
+  },
+  {
+    subject: "Last reminder about your cart",
+    heading: "One last reminder",
+    intro: "This is the last time we'll remind you about your cart. If you still want these items, they're one tap away.",
+    after: "We won't email you about this cart again.",
+  },
+] as const;
+
+/** One email of the cart reminder series (step 0–3). */
+export async function buildCartReminderEmail(cartId: string, email: string, step = 0): Promise<OutgoingEmail | null> {
+  const copy = CART_STEP_COPY[Math.min(step, CART_STEP_COPY.length - 1)];
   const cart = await prisma.cart.findUnique({
     where: { id: cartId },
     select: {
@@ -349,28 +386,29 @@ export async function buildCartReminderEmail(cartId: string, email: string): Pro
     seed: cart.items.map((i) => ({ productId: i.productId, variantId: i.variantId })),
   }).catch(() => []);
 
+  const restore = restoreCartUrl(cartId);
+  const { page, oneClick } = unsubscribeLinks(email);
   return {
     to: email,
-    subject: "You left something in your cart",
+    subject: copy.subject,
+    listUnsubscribe: oneClick,
     content: {
-      preheader: `${cart.items[0].product.name}${cart.items.length > 1 ? ` and ${cart.items.length - 1} more` : ""} are waiting for you.`,
-      heading: "Your cart is waiting for you",
-      paragraphs: [
-        "Hi,",
-        "You left some great picks in your cart. Complete your order now: delivery is free and you can pay cash on delivery.",
-      ],
-      lines,
+      preheader: `${cart.items[0].product.name}${cart.items.length > 1 ? ` and ${cart.items.length - 1} more` : ""} ${cart.items.length > 1 ? "are" : "is"} waiting for you.`,
+      heading: copy.heading,
+      paragraphs: ["Hi,", copy.intro],
+      lines: lines.map((l) => ({ ...l, url: restore })),
       totals: [["Subtotal", money(subtotal)]],
-      button: { label: "Complete my order", url: `${SITE_URL}/cart` },
-      afterButton: ["Prices and stock can change, so don't wait too long."],
+      button: { label: "Complete my order", url: restore },
+      afterButton: [copy.after],
       sections,
-      campaign: "abandoned-cart",
+      campaign: `abandoned-cart-${step + 1}`,
       reason: "You're receiving this email because you added items to your cart on dukanwalley.com.",
+      unsubscribeUrl: page,
     },
   };
 }
 
-export type OutgoingEmail = { to: string; subject: string; content: EmailContent };
+export type OutgoingEmail = { to: string; subject: string; content: EmailContent; listUnsubscribe?: string };
 
 /** One designed email to the buyer about their order. Throws on send failure. */
 export async function sendBuyerOrderEmail(orderId: string, e: BuyerOrderEmail) {
@@ -378,8 +416,9 @@ export async function sendBuyerOrderEmail(orderId: string, e: BuyerOrderEmail) {
   if (email) await sendEmail(email);
 }
 
-/** Cart reminder email. Throws on send failure. */
-export async function sendCartReminderEmail(cartId: string, to: string) {
-  const email = await buildCartReminderEmail(cartId, to);
+/** Cart reminder email (step 0–3). Throws on send failure. Returns false if the cart is empty. */
+export async function sendCartReminderEmail(cartId: string, to: string, step = 0) {
+  const email = await buildCartReminderEmail(cartId, to, step);
   if (email) await sendEmail(email);
+  return !!email;
 }

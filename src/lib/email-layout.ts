@@ -45,6 +45,16 @@ export type EmailContent = {
   reason?: string;
   /** utm_campaign for links back to the site. */
   campaign?: string;
+  /** Marketing emails: "Unsubscribe" link in the footer. */
+  unsubscribeUrl?: string;
+  /** Wide banner image above the heading. */
+  hero?: { imageUrl: string; url?: string; alt?: string };
+  /** Short offer text shown as a pill above the heading, e.g. "Up to 40% off". */
+  badge?: string;
+  /** Theme colour (hex) for the top border, badge and main button, e.g. green for Eid. */
+  accent?: string;
+  /** Paragraphs after the product sections. */
+  outro?: string[];
 };
 
 const C = {
@@ -163,24 +173,41 @@ const FOOTER_LINKS: [string, string][] = [
 
 export function renderEmail(c: EmailContent): { html: string; text: string } {
   const campaign = c.campaign;
+  const accent = c.accent && /^#[0-9a-fA-F]{6}$/.test(c.accent) ? c.accent : null;
+  const heroHref = c.hero?.url ? escapeHtml(track(c.hero.url, campaign)) : null;
+  const heroImg = c.hero
+    ? `<img src="${escapeHtml(c.hero.imageUrl)}" width="600" alt="${escapeHtml(c.hero.alt ?? c.heading)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;" />`
+    : "";
+  const hero = c.hero ? `<tr><td style="padding:0;">${heroHref ? `<a href="${heroHref}">${heroImg}</a>` : heroImg}</td></tr>` : "";
+  const badge = c.badge
+    ? `<p style="margin:0 0 12px;"><span style="display:inline-block;padding:5px 12px;border-radius:999px;background:${accent ?? C.orange};color:#ffffff;font-size:13px;font-weight:700;letter-spacing:.02em;">${escapeHtml(c.badge)}</span></p>`
+    : "";
+  const outro = c.outro?.length
+    ? `<tr><td style="padding:8px 32px 24px;${FONT}">${c.outro
+        .map((p) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:${C.text};">${richText(p, campaign)}</p>`)
+        .join("")}</td></tr>`
+    : "";
   const home = escapeHtml(track(SITE_URL + "/", campaign));
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="color-scheme" content="light"/><title>${escapeHtml(c.heading)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg};">
 ${c.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(c.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>` : ""}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.bg};"><tr><td align="center" style="padding:24px 12px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border-top:4px solid ${C.orange};">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border-top:4px solid ${accent ?? C.orange};">
 <tr><td align="center" style="padding:24px 24px 12px;"><a href="${home}"><img src="${SITE_URL}/email-logo.png" width="199" height="40" alt="${SITE_NAME}" style="display:block;border:0;" /></a></td></tr>
 <tr><td align="center" style="padding:0 24px 16px;${FONT}font-size:12px;color:${C.muted};">Free delivery &nbsp;&middot;&nbsp; Cash on Delivery &nbsp;&middot;&nbsp; Verified sellers</td></tr>
+${hero}
 <tr><td style="padding:24px 32px 8px;border-top:1px solid ${C.line};${FONT}">
+${badge}
 <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:${C.navy};">${escapeHtml(c.heading)}</h1>
 ${c.paragraphs.map((p) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:${C.text};">${richText(p, campaign)}</p>`).join("\n")}
 ${c.lines?.length ? linesTable(c.lines, c.totals, campaign) : ""}
 ${c.details?.length ? detailsTable(c.details) : ""}
-${c.button ? button(c.button, campaign) : ""}
+${c.button ? button(c.button, campaign, accent ?? C.teal) : ""}
 ${(c.afterButton ?? []).map((p) => `<p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:${C.muted};text-align:center;">${richText(p, campaign)}</p>`).join("\n")}
 </td></tr>
 ${(c.sections ?? []).filter((s) => s.products.length).map((s) => section(s, campaign)).join("\n")}
+${outro}
 <tr><td style="padding:24px 32px;background:${C.navy};${FONT}" align="center">
 <p style="margin:0 0 12px;font-size:13px;">${FOOTER_LINKS.map(
     ([label, path]) => `<a href="${escapeHtml(track(SITE_URL + path, campaign))}" style="color:#ffffff;text-decoration:none;font-weight:600;">${label}</a>`,
@@ -189,12 +216,14 @@ ${(c.sections ?? []).filter((s) => s.products.length).map((s) => section(s, camp
 <p style="margin:0 0 4px;font-size:12px;color:#aab6cc;">${BUSINESS.streetAddress}, ${BUSINESS.locality}, ${BUSINESS.city}</p>
 <p style="margin:0;font-size:12px;color:#aab6cc;"><a href="tel:${BUSINESS.phone}" style="color:#aab6cc;text-decoration:none;">${BUSINESS.phoneDisplay}</a> &nbsp;&middot;&nbsp; <a href="mailto:${BUSINESS.email}" style="color:#aab6cc;text-decoration:none;">${BUSINESS.email}</a></p>
 ${c.reason ? `<p style="margin:14px 0 0;font-size:11px;line-height:1.5;color:#8796b3;">${escapeHtml(c.reason)}</p>` : ""}
+${c.unsubscribeUrl ? `<p style="margin:8px 0 0;font-size:11px;"><a href="${escapeHtml(c.unsubscribeUrl)}" style="color:#aab6cc;text-decoration:underline;">Unsubscribe</a></p>` : ""}
 </td></tr>
 </table>
 </td></tr></table>
 </body></html>`;
 
   const text = [
+    ...(c.badge ? [c.badge] : []),
     c.heading,
     "",
     ...c.paragraphs.flatMap((p) => [p, ""]),
@@ -206,10 +235,12 @@ ${c.reason ? `<p style="margin:14px 0 0;font-size:11px;line-height:1.5;color:#87
     ...(c.sections ?? [])
       .filter((s) => s.products.length)
       .flatMap((s) => [s.title.toUpperCase(), ...s.products.map((p) => `- ${p.name}, ${p.price}: ${p.url}`), ""]),
+    ...(c.outro ?? []).flatMap((p) => [p, ""]),
     "--",
     `${SITE_NAME}: ${SITE_URL}`,
     `${BUSINESS.phoneDisplay} · ${BUSINESS.email}`,
     ...(c.reason ? ["", c.reason] : []),
+    ...(c.unsubscribeUrl ? [`Unsubscribe: ${c.unsubscribeUrl}`] : []),
   ].join("\n");
   return { html, text };
 }

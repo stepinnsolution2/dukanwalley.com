@@ -64,6 +64,7 @@ export default function CheckoutPage() {
   const [methods, setMethods] = useState<MarketPaymentMethod[]>(["CASH_ON_DELIVERY"]);
   const [codNote, setCodNote] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [offers, setOffers] = useState(true);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState<Address>({
     name: "",
@@ -112,7 +113,18 @@ export default function CheckoutPage() {
     !!address.region &&
     textFields.every((f) => !f.required || address[f.key].trim());
 
+  /** Saves the email as soon as it's typed (cart reminder if checkout isn't finished). */
+  function saveEmail(wantsOffers = offers) {
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return;
+    void fetch("/api/checkout/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), newsletter: wantsOffers }),
+    }).catch(() => null);
+  }
+
   async function placeOrder() {
+    saveEmail();
     setLoading(true);
     setError(null);
     const shippingAddress = Object.fromEntries(
@@ -167,8 +179,24 @@ export default function CheckoutPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onBlur={() => saveEmail()}
           required
         />
+        <label className="flex items-start gap-2 text-sm text-zinc-700">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={offers}
+            onChange={(e) => {
+              setOffers(e.target.checked);
+              saveEmail(e.target.checked);
+            }}
+          />
+          <span>
+            Email me offers, festive deals and new arrivals
+            <span className="block text-xs text-zinc-500">Unsubscribe any time. We&apos;ll also remind you if you don&apos;t finish your order.</span>
+          </span>
+        </label>
         <input
           type="tel"
           className={input}

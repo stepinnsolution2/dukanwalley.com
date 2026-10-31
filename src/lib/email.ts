@@ -21,7 +21,14 @@ export function getTransport(s: IntegrationSettings) {
  * Sends one email in the branded layout: pass `content` for a designed email, or just `text`
  * (wrapped with the logo header and footer).
  */
-export async function sendEmail(opts: { to: string; subject: string } & ({ content: EmailContent } | { text: string })) {
+export async function sendEmail(
+  opts: {
+    to: string;
+    subject: string;
+    /** Marketing emails: one-click unsubscribe URL for the List-Unsubscribe header (Gmail, Apple Mail). */
+    listUnsubscribe?: string;
+  } & ({ content: EmailContent } | { text: string }),
+) {
   // Imported stores have placeholder logins (…@marketplace.internal) that can't receive mail;
   // sending there would only bounce and hurt the sender reputation.
   if (/\.internal$/i.test(opts.to.trim())) return;
@@ -33,5 +40,14 @@ export async function sendEmail(opts: { to: string; subject: string } & ({ conte
     console.info("[email:stub]", { from, to: opts.to, subject: opts.subject, text });
     return;
   }
-  await transport.sendMail({ from, to: opts.to, subject: opts.subject, text, html });
+  await transport.sendMail({
+    from,
+    to: opts.to,
+    subject: opts.subject,
+    text,
+    html,
+    ...(opts.listUnsubscribe
+      ? { headers: { "List-Unsubscribe": `<${opts.listUnsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } }
+      : {}),
+  });
 }

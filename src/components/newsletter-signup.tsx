@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { markSubscribed } from "@/components/email-capture";
 
 export function NewsletterSignup({ source = "footer" }: { source?: string }) {
   const [email, setEmail] = useState("");
@@ -18,6 +19,7 @@ export function NewsletterSignup({ source = "footer" }: { source?: string }) {
     const j = await res.json().catch(() => ({}));
     if (res.ok) {
       setState("done");
+      markSubscribed();
       setMessage("Thanks! You're subscribed to deals and new arrivals.");
       setEmail("");
     } else {

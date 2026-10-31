@@ -554,13 +554,66 @@ model Coupon {
   usedCount      Int       @default(0)
 }
 
+/// Every email address we may contact: newsletter sign-ups, checkout emails, new accounts.
 model NewsletterSubscriber {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  phone     String?
-  status    String   @default("ACTIVE")
-  source    String?
-  createdAt DateTime @default(now())
+  id             String    @id @default(cuid())
+  email          String    @unique
+  phone          String?
+  /// ACTIVE, or UNSUBSCRIBED: no marketing at all (cart reminders included). Order emails still go.
+  status         String    @default("ACTIVE")
+  /// Asked for newsletters. False: only cart reminders (e.g. typed an email at checkout, box unticked).
+  newsletter     Boolean   @default(true)
+  /// Where we got it: footer, popup, checkout, account, admin.
+  source         String?
+  /// Market the shopper was browsing when we got the address.
+  market         Market?
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+}
+
+/// An admin-written newsletter built from a template in src/lib/newsletter-templates.ts.
+model NewsletterCampaign {
+  id            String    @id @default(cuid())
+  name          String
+  template      String
+  subject       String    @default("")
+  preheader     String    @default("")
+  /// Slot values for the template, by slot key.
+  content       Json      @default("{}")
+  /// Prices and products are shown for this market; sent to its subscribers and those with no market.
+  market        Market    @default(PK)
+  /// Add "Picked for you" products for each reader (their cart and what they viewed).
+  personalPicks Boolean   @default(true)
+  /// DRAFT | SENDING | SENT | CANCELLED
+  status        String    @default("DRAFT")
+  recipients    Int       @default(0)
+  sentCount     Int       @default(0)
+  failedCount   Int       @default(0)
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sends NewsletterSend[]
+}
+
+/// One newsletter to one address; the queue the cron job works through (within the daily limit).
+model NewsletterSend {
+  id         String    @id @default(cuid())
+  campaignId String
+  email      String
+  /// QUEUED | SENDING | SENT | FAILED | SKIPPED
+  status     String    @default("QUEUED")
+  error      String?
+  sentAt     DateTime?
+
+  campaign NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, email])
+  @@index([campaignId, status])
+  @@index([status, sentAt])
 }
 
 model UserNotification {

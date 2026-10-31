@@ -1,3 +1,4 @@
+import { captureEmail } from "@/lib/marketing";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -166,12 +167,15 @@ export async function POST(req: Request) {
     update: { quantity: newQty },
   });
 
-  if (guestEmail || guestPhone) {
-    await prisma.cart.update({
-      where: { id: cart.id },
-      data: { guestEmail, guestPhone },
-    });
+  // "Remind me if I leave items in my cart" on the product page: a contact for reminders only.
+  if (guestEmail) {
+    await captureEmail({ email: guestEmail, source: "cart", newsletter: false, market: product.vendor.market, phone: guestPhone }).catch(() => null);
   }
+  // Touch the cart even without contact details: cart reminders count from the last change.
+  await prisma.cart.update({
+    where: { id: cart.id },
+    data: { updatedAt: new Date(), ...(guestEmail ? { guestEmail } : {}), ...(guestPhone ? { guestPhone } : {}) },
+  });
 
   return cartResponse(await loadCart(cart.id));
 }
@@ -197,5 +201,6 @@ export async function PATCH(req: Request) {
     }
     await prisma.cartItem.update({ where: { id: itemId }, data: { quantity } });
   }
+  await prisma.cart.update({ where: { id: cart.id }, data: { updatedAt: new Date() } });
   return cartResponse(await loadCart(cart.id));
 }

@@ -1,3 +1,4 @@
+import { captureEmail } from "@/lib/marketing";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -61,6 +62,8 @@ export async function POST(req: Request) {
         role: UserRole.CUSTOMER,
       },
     });
+    // Listed in Admin › Newsletter › Contacts; newsletters only if they sign up for them.
+    await captureEmail({ email: data.email, source: "account", newsletter: false, phone: data.phone }).catch(() => null);
     return NextResponse.json({ ok: true });
   }
 

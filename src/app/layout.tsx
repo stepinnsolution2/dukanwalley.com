@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { EmailCapture } from "@/components/email-capture";
 import { Providers } from "@/components/providers";
 import { integrationSettings } from "@/lib/integration-settings";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
@@ -48,14 +49,18 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   // Google Analytics 4, when a measurement ID is saved in Admin › Settings (validated as G-XXXX).
-  const ga = (await integrationSettings()).GA_MEASUREMENT_ID;
+  const settings = await integrationSettings();
+  const ga = settings.GA_MEASUREMENT_ID;
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <EmailCapture enabled={settings.EMAIL_POPUP !== "off"} />
+        </Providers>
         {ga ? (
           <>
             <Script src={`https://www.googletagmanager.com/gtag/js?id=${ga}`} strategy="afterInteractive" />

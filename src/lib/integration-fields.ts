@@ -17,13 +17,18 @@ export type IntegrationField = {
 };
 
 export type IntegrationGroup = {
-  id: "checkout" | "jazzcash" | "easypaisa" | "cards" | "email" | "analytics" | "ai";
+  id: "checkout" | "marketing" | "jazzcash" | "easypaisa" | "cards" | "email" | "analytics" | "ai";
   title: string;
   description: string;
   fields: readonly IntegrationField[];
   /** Fields that must all be set for the group to count as configured. */
   required: readonly string[];
 };
+
+const ON_OFF = [
+  { value: "on", label: "On" },
+  { value: "off", label: "Off" },
+] as const;
 
 const MODE = [
   { value: "sandbox", label: "Sandbox (testing)" },
@@ -45,6 +50,35 @@ export const INTEGRATION_GROUPS: readonly IntegrationGroup[] = [
         multiline: true,
         defaultValue: COD_NOTE_DEFAULT,
         help: "Shown under the payment choice when the buyer picks Cash on Delivery. Clear the box and save to go back to the default text; type a single - to show no note.",
+      },
+    ],
+    required: [],
+  },
+  {
+    id: "marketing",
+    title: "Email marketing",
+    description: "Collecting shoppers' emails, cart reminders and newsletters (Admin › Newsletter).",
+    fields: [
+      {
+        key: "EMAIL_POPUP",
+        label: "Sign-up box on the site",
+        options: ON_OFF,
+        defaultValue: "on",
+        help: "A small box in the corner inviting shoppers to join for deals. Shown at most once every 14 days, never at checkout or to signed-in customers.",
+      },
+      {
+        key: "CART_REMINDERS",
+        label: "Cart reminder emails",
+        options: ON_OFF,
+        defaultValue: "on",
+        help: "Up to 4 reminders (after 2 hours, 1 day, 3 days and 7 days) when a shopper leaves items in the cart; sent 9am–9pm only.",
+      },
+      {
+        key: "MARKETING_DAILY_LIMIT",
+        label: "Marketing emails per day",
+        defaultValue: "80",
+        placeholder: "80",
+        help: "Cart reminders and newsletters stop for the day at this number; the rest go the next day. Resend's free plan allows 100 emails a day in total (order emails included) and 3,000 a month.",
       },
     ],
     required: [],
