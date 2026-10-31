@@ -34,6 +34,11 @@ export async function resolveCommissionBps(opts: {
   });
   if (catRule) return catRule.bps;
 
+  return platformDefaultCommissionBps();
+}
+
+/** The rate for stores and categories without their own: global rule → platform setting → 10%. */
+export async function platformDefaultCommissionBps() {
   const global = await prisma.commissionRule.findFirst({
     where: { active: true, ruleType: "GLOBAL" },
     orderBy: { createdAt: "desc" },

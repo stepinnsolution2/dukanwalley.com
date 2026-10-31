@@ -23,6 +23,7 @@ const GRANTS = {
   "vendors:manage": OPERATIONS, // create vendors, KYC status, verification notes
   "vendors:restrict": OWNER, // suspend selling / payouts
   "vendors:commission": OWNER,
+  "finance:view": OWNER, // commission earned per order and per seller
   "vendors:login": OWNER, // change a store's login email and password
   "newsletter:view": OPERATIONS,
   "newsletter:manage": OPERATIONS,
