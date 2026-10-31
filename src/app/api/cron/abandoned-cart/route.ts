@@ -14,10 +14,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Carts left 1–7 days ago; older ones are not chased.
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const oldest = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const carts = await prisma.cart.findMany({
     where: {
-      updatedAt: { lt: cutoff },
+      updatedAt: { lt: cutoff, gte: oldest },
       items: { some: {} },
       OR: [{ guestEmail: { not: null } }, { userId: { not: null } }],
     },
@@ -25,6 +27,7 @@ export async function POST(req: Request) {
       items: { include: { product: true } },
       user: { select: { email: true, phone: true } },
     },
+    orderBy: { updatedAt: "desc" },
     take: 50,
   });
 
@@ -33,6 +36,16 @@ export async function POST(req: Request) {
     const email = cart.guestEmail ?? cart.user?.email ?? null;
     const phone = cart.guestPhone ?? cart.user?.phone ?? null;
     if (!email && !phone) continue;
+
+    // One reminder per cart until the shopper changes it again.
+    const reminded = await prisma.notificationCampaignLog.count({
+      where: {
+        type: NotificationCampaignType.ABANDONED_CART,
+        sentAt: { gte: cart.updatedAt },
+        payload: { path: ["cartId"], equals: cart.id },
+      },
+    });
+    if (reminded) continue;
 
     const productIds = [...new Set(cart.items.map((i) => i.productId))];
     const viewWhere = {
@@ -54,14 +67,19 @@ export async function POST(req: Request) {
     const top = cart.items[0]?.product?.name ?? "your picks";
     const msg = `You left items in your cart (including ${top}). Complete checkout when ready. Offers may expire.`;
 
-    if (email) {
-      await sendEmail({
-        to: email,
-        subject: "Your cart is waiting",
-        text: msg,
-      });
+    try {
+      if (email) {
+        await sendEmail({
+          to: email,
+          subject: "Your cart is waiting",
+          text: msg,
+        });
+      }
+      if (phone) await sendSms(phone, msg);
+    } catch (e) {
+      console.error("[abandoned-cart]", cart.id, e instanceof Error ? e.message : e);
+      continue;
     }
-    if (phone) await sendSms(phone, msg);
 
     await prisma.notificationCampaignLog.create({
       data: {
