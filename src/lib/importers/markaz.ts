@@ -224,6 +224,9 @@ export function placeProduct(p: MarkazProduct): Placement | null {
 
 /** Markaz/Shopify size spellings → ours. */
 const SIZE_WORDS: Record<string, string> = {
+  "xx-small": "XXS",
+  "x-small": "XS",
+  "extra small": "XS",
   small: "S",
   medium: "M",
   large: "L",
@@ -251,6 +254,7 @@ export function normalizeSize(raw: string) {
   if (isLength(raw.replace(/\[[^\]]*\]|\([^)]*\)/g, " ").trim().replace(/\s+/g, " "))) return "Unstitched";
   let v = raw
     .replace(/\[[^\]]*\]|\([^)]*\)/g, " ")
+    .replace(/\s*[[(][^\])]*$/, "") // an unclosed "[120kg" (a hyphen inside the bracket split it)
     .replace(/\s*\/\s*\d+.*$/, "") // "L/175", "3XL/190"
     .replace(/\s+\d+(\.\d+)?\s*(kg)?(\s*-\s*\d+(\.\d+)?\s*kg)?\s*$/i, "") // "5xl 95-105kg", "M 47.50 kg-55.00 kg"
     .trim()
@@ -275,7 +279,7 @@ function isLength(v: string) {
 
 /** Sizes we recognise after normalising: letter sizes, Free Size, Unstitched, and kids' heights/ages. */
 function isRecognisedSize(v: string) {
-  return /^(x{0,3}s|m|x{0,3}l|[4-9]xl|free size|unstitched|\d+\s*cm|\d+(-\d+)?\s*(y|yrs?|years?|m|months?))$/i.test(v);
+  return /^(x{0,3}s|m|x{0,3}l|[4-9]xl|\d{2}|free size|unstitched|\d+\s*cm|\d+(-\d+)?\s*(y|yrs?|years?|m|months?))$/i.test(v);
 }
 
 /** "Sky blue (white picture)" → "Sky Blue", "160507 black hooded" → "Black Hooded", "Red [Thickened]]" → "Red". */
@@ -283,7 +287,9 @@ export function cleanColour(raw: string) {
   const v = raw
     .replace(/\[[^\]]*\]*|\([^)]*\)*|\{[^}]*\}*/g, " ")
     .replace(/[[\](){}]/g, " ")
-    .replace(/^\s*\d{3,}\s*/, "")
+    .replace(/^\s*\d{3,}\s*-?\s*/, "")
+    .replace(/(^|[\s-])[a-z]{0,4}\d+[a-z\d]*(?=$|[\s-])/gi, " ") // supplier codes: "Q105-", "NJF01", "T103"
+    .replace(/^[\s-]+|[\s-]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
   return v ? titleCase(v.toLowerCase()) : null;

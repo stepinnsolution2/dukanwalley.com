@@ -90,7 +90,12 @@ export const CATEGORIES: Cat[] = [
         name: "Size",
         dataType: "select",
         required: true,
-        options: ["S", "M", "L", "XL", "XXL", "XXXL", "4XL", "5XL", "6XL", "Free Size", "Unstitched"],
+        // Letters, plus number sizes some sellers use: shirt collar (36–46) and European chest (48–60).
+        options: [
+          "XS", "S", "M", "L", "XL", "XXL", "XXXL", "4XL", "5XL", "6XL", "7XL", "8XL",
+          "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "48", "50", "52", "54", "56", "58", "60",
+          "Free Size", "Unstitched",
+        ],
         isVariant: true,
       },
       color,
@@ -441,11 +446,18 @@ async function upsertCategory(
   return existing;
 }
 
+/** The field's current choices plus any new ones from the tree (nothing the admin set is removed). */
+async function mergedOptions(prisma: PrismaClient, categoryId: string, a: Attr) {
+  const cur = await prisma.categoryAttribute.findUnique({ where: { categoryId_key: { categoryId, key: a.key } }, select: { options: true } });
+  const have = (cur?.options ?? []) as string[];
+  return [...have, ...(a.options ?? []).filter((o) => !have.includes(o))];
+}
+
 async function ensureAttributes(prisma: PrismaClient, categoryId: string, attrs: Attr[] = []) {
   for (const a of attrs) {
     await prisma.categoryAttribute.upsert({
       where: { categoryId_key: { categoryId, key: a.key } },
-      update: {},
+      update: a.options?.length ? { options: await mergedOptions(prisma, categoryId, a) } : {},
       create: { categoryId, options: [], ...a },
     });
   }
