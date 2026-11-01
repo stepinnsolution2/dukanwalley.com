@@ -179,7 +179,11 @@ export function placeProduct(p: MarkazProduct): Placement | null {
   if (/\brings?\b/.test(type)) return place("jewellery-watches-rings");
   if (/bangle|bracelet|kangan/.test(all)) return place("jewellery-watches-bangles-bracelets");
   if (/necklace|artificial set|jewel/.test(all)) return place("jewellery-watches-necklaces-sets");
-  if (/hand ?bag|clutch|purse|tote/.test(all)) return place("bags-accessories-handbags");
+  if (/back ?pack|school ?bag|laptop ?bag|rucksack/.test(all)) return place("bags-accessories-backpacks");
+  if (/hand ?bag|clutch|purse|tote|shoulder ?bag|cross ?body|sling ?bag/.test(all)) return place("bags-accessories-handbags");
+  if (/wallet|card ?holder/.test(type)) return place("bags-accessories-wallets");
+  if (/\bbelt\b/.test(type)) return place("bags-accessories-belts");
+  if (/sunglass/.test(all)) return place("bags-accessories-sunglasses");
   if (/cosmetic|makeup|lipstick|lip gloss|\blip\b|foundation|blush|eye ?shadow|mascara|eyeliner|concealer|beauty/.test(all)) {
     const makeup = "beauty-personal-care-makeup";
     if (/deal|bundle|kit|\bset\b/.test(type)) return place(`${makeup}-makeup-bundle`, makeup);
