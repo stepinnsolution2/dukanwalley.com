@@ -21,8 +21,9 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // AVIF where the browser supports it (smaller), WebP otherwise.
-    formats: ["image/avif", "image/webp"],
+    // WebP only: AVIF saved almost nothing on photos here but is far slower to encode on first
+    // request, which hurt LCP (score 93 → 75 on 2026-11-02).
+    formats: ["image/webp"],
     // Widths for fixed-size images, so e.g. the 139px logo and 112px category tiles aren't
     // sent at 256/384px (defaults plus 112, 144, 224, 288).
     imageSizes: [16, 32, 48, 64, 96, 112, 128, 144, 224, 256, 288, 384],
