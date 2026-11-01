@@ -153,12 +153,48 @@ model VendorProfile {
   isTopSeller          Boolean           @default(false)
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
+  /// Account thread (payments and messages): when each side last opened it, for unread counts.
+  accountSeenByAdminAt  DateTime?
+  accountSeenByVendorAt DateTime?
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   products        Product[]        @relation("VendorProducts")
   ledgerAccount   LedgerAccount?
   withdrawals     WithdrawalRequest[]
   orderItems      OrderItem[]
+  accountEntries  VendorAccountEntry[]
+}
+
+/// One entry in a vendor's account thread: a payment DukanWalley made to the vendor, or a message
+/// from either side. Payments are never deleted; a mistaken one is voided with a reason.
+model VendorAccountEntry {
+  id          String    @id @default(cuid())
+  vendorId    String
+  /// PAYMENT (admin only) | MESSAGE
+  kind        String
+  /// ADMIN | VENDOR
+  side        String
+  authorId    String?
+  authorName  String?
+  body        String    @default("")
+  /// PAYMENT: amount paid to the vendor, in the vendor's market currency.
+  amount      Decimal?  @db.Decimal(12, 2)
+  /// PAYMENT: e.g. Bank transfer, JazzCash, Easypaisa, Cash.
+  method      String?
+  /// PAYMENT: transaction ID / cheque number.
+  reference   String?
+  paidOn      DateTime?
+  /// Private files: [{ key, name, type, size }], served by /api/account-files to staff and this vendor.
+  attachments Json      @default("[]")
+  /// PAYMENT: the vendor confirmed receiving it.
+  confirmedAt DateTime?
+  voidedAt    DateTime?
+  voidReason  String?
+  createdAt   DateTime  @default(now())
+
+  vendor VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId, createdAt])
 }
 
 model SalesProfile {

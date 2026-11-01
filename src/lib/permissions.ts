@@ -24,6 +24,7 @@ const GRANTS = {
   "vendors:restrict": OWNER, // suspend selling / payouts
   "vendors:commission": OWNER,
   "finance:view": OWNER, // commission earned per order and per seller
+  "payouts:manage": OWNER, // record payments to vendors and message them
   "vendors:login": OWNER, // change a store's login email and password
   "newsletter:view": OPERATIONS,
   "newsletter:manage": OPERATIONS,
