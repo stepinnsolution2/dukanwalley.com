@@ -42,6 +42,12 @@ const patchSchema = z.object({
   /** Public name shown to shoppers instead of the real store name; null shows the real name. */
   displayName: z.string().trim().max(80).nullable().optional(),
   loginEmail: z.string().trim().toLowerCase().email().optional(),
+  loginUsername: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9._-]{3,40}$/, "Username: 3–40 letters, numbers, dots, dashes or underscores")
+    .optional(),
   newPassword: z.string().min(8, "Password must be at least 8 characters").max(128).optional(),
 });
 
@@ -58,6 +64,7 @@ const fieldPermissions: Record<Exclude<keyof z.infer<typeof patchSchema>, "id">,
   isTopSeller: "vendors:manage",
   displayName: "vendors:manage",
   loginEmail: "vendors:login",
+  loginUsername: "vendors:login",
   newPassword: "vendors:login",
 };
 
@@ -152,7 +159,7 @@ export async function PATCH(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { id, loginEmail, newPassword, ...data } = parsed.data;
+  const { id, loginEmail, loginUsername, newPassword, ...data } = parsed.data;
 
   const fields = Object.keys(parsed.data).filter((k) => k !== "id") as (keyof typeof fieldPermissions)[];
   if (!fields.length) {
@@ -180,13 +187,21 @@ export async function PATCH(req: Request) {
     }
   }
 
+  if (loginUsername !== undefined) {
+    const taken = await prisma.user.findUnique({ where: { username: loginUsername }, select: { id: true } });
+    if (taken && taken.id !== vendor.userId) {
+      return NextResponse.json({ error: "Another account already uses that username" }, { status: 409 });
+    }
+  }
+
   await prisma.$transaction(async (tx) => {
     if (Object.keys(data).length) await tx.vendorProfile.update({ where: { id }, data });
-    if (loginEmail !== undefined || newPassword !== undefined) {
+    if (loginEmail !== undefined || loginUsername !== undefined || newPassword !== undefined) {
       await tx.user.update({
         where: { id: vendor.userId },
         data: {
           ...(loginEmail !== undefined ? { email: loginEmail } : {}),
+          ...(loginUsername !== undefined ? { username: loginUsername } : {}),
           ...(newPassword !== undefined ? { passwordHash: await hashPassword(newPassword) } : {}),
         },
       });

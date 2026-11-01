@@ -23,7 +23,7 @@ export default async function AdminVendorPage({ params }: Props) {
   const role = session?.user?.role;
   const vendor = await prisma.vendorProfile.findUnique({
     where: { id },
-    include: { user: { select: { email: true, name: true, createdAt: true } }, ledgerAccount: true },
+    include: { user: { select: { email: true, username: true, name: true, createdAt: true } }, ledgerAccount: true },
   });
   if (!vendor) notFound();
   const m = MARKETS[vendor.market];
@@ -107,7 +107,7 @@ export default async function AdminVendorPage({ params }: Props) {
       </div>
 
       <VendorControls
-        vendor={{ ...vendor, loginEmail: vendor.user.email }}
+        vendor={{ ...vendor, loginEmail: vendor.user.email, loginUsername: vendor.user.username }}
         labels={m.idLabels}
         canManage={can(role, "vendors:manage")}
         canRestrict={can(role, "vendors:restrict")}

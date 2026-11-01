@@ -36,9 +36,11 @@ function LoginForm() {
       <h1 className="text-2xl font-semibold text-zinc-900">Sign in</h1>
       <form onSubmit={onSubmit} className="mt-4 space-y-4">
         <div>
-          <label className="text-sm font-medium text-zinc-700">Email</label>
+          <label className="text-sm font-medium text-zinc-700">Email or username</label>
           <input
-            type="email"
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}

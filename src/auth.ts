@@ -5,7 +5,8 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  // An email address, or a username (sellers).
+  email: z.string().trim().min(2).max(200),
   password: z.string().min(1),
 });
 
@@ -19,14 +20,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email or username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       authorize: async (raw) => {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const { email, password } = parsed.data;
-        const user = await prisma.user.findUnique({ where: { email } });
+        const { email: login, password } = parsed.data;
+        const id = login.toLowerCase();
+        const user = await prisma.user.findUnique({ where: id.includes("@") ? { email: id } : { username: id } });
         if (!user?.passwordHash || user.banned) return null;
         const ok = await verifyPassword(password, user.passwordHash);
         if (!ok) return null;

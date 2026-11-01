@@ -19,6 +19,7 @@ type Vendor = {
   displayName: string | null;
   slug: string | null;
   loginEmail: string;
+  loginUsername: string | null;
 };
 
 const RESTRICTIONS = [
@@ -55,7 +56,7 @@ export function VendorControls({
   const [restriction, setRestriction] = useState({ restriction: vendor.restriction, suspendedReason: vendor.suspendedReason ?? "" });
   const [commission, setCommission] = useState(vendor.commissionOverrideBps === null ? "" : String(vendor.commissionOverrideBps / 100));
   const [displayName, setDisplayName] = useState(vendor.displayName ?? "");
-  const [login, setLogin] = useState({ email: vendor.loginEmail, password: "" });
+  const [login, setLogin] = useState({ email: vendor.loginEmail, username: vendor.loginUsername ?? "", password: "" });
   const [msg, setMsg] = useState<{ section: string; text: string; ok: boolean } | null>(null);
 
   async function save(section: string, body: Record<string, unknown>) {
@@ -114,7 +115,11 @@ export function VendorControls({
         {canLogin ? (
           <section className={box}>
             <h2 className="font-semibold">Store login</h2>
-            <p className="text-xs text-zinc-500">The email and password this store uses to sign in to its seller panel.</p>
+            <p className="text-xs text-zinc-500">The store signs in to its seller panel with its username (or email) and password.</p>
+            <label className="block">
+              Username
+              <input className={input} value={login.username} onChange={(e) => setLogin((s) => ({ ...s, username: e.target.value }))} />
+            </label>
             <label className="block">
               Login email
               <input className={input} type="email" value={login.email} onChange={(e) => setLogin((s) => ({ ...s, email: e.target.value }))} />
@@ -128,6 +133,7 @@ export function VendorControls({
               onClick={async () => {
                 const body: Record<string, string> = {};
                 if (login.email.trim() && login.email.trim().toLowerCase() !== vendor.loginEmail) body.loginEmail = login.email.trim();
+                if (login.username.trim() && login.username.trim().toLowerCase() !== (vendor.loginUsername ?? "")) body.loginUsername = login.username.trim();
                 if (login.password) {
                   if (login.password.length < 8) {
                     setMsg({ section: "login", text: "Password must be at least 8 characters", ok: false });
