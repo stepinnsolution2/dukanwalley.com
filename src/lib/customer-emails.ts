@@ -186,7 +186,9 @@ function orderSummary(order: LoadedOrder): Pick<EmailContent, "lines" | "totals"
   totals.push(["Total", money(order.total)]);
 
   const a = (order.shippingAddress ?? {}) as Address;
-  const address = [a.name, a.line1, a.line2, [a.city, a.region, a.postalCode].filter(Boolean).join(", ")].filter(Boolean).join("\n");
+  // Name on its own line, then the whole address on one line (it wraps only if it must).
+  const street = [a.line1, a.line2, a.city, a.region, a.postalCode].filter(Boolean).join(", ");
+  const address = [a.name, street].filter(Boolean).join("\n");
   const details: [string, string][] = [];
   if (address) details.push(["Deliver to", address]);
   if (order.customerPhone) details.push(["Phone", order.customerPhone]);

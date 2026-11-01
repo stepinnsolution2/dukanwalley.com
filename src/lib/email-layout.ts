@@ -159,7 +159,7 @@ function detailsTable(rows: [string, string][]) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;background:#fafafa;border:1px solid ${C.line};border-radius:8px;">${rows
     .map(
       ([k, v]) =>
-        `<tr><td valign="top" style="padding:10px 12px;${FONT}font-size:13px;color:${C.muted};width:35%;">${escapeHtml(k)}</td><td style="padding:10px 12px;${FONT}font-size:14px;color:${C.text};">${escapeHtml(v).replace(/\n/g, "<br/>")}</td></tr>`,
+        `<tr><td valign="top" style="padding:10px 12px;${FONT}font-size:13px;color:${C.muted};width:90px;white-space:nowrap;">${escapeHtml(k)}</td><td style="padding:10px 12px;${FONT}font-size:14px;color:${C.text};">${escapeHtml(v).replace(/\n/g, "<br/>")}</td></tr>`,
     )
     .join("")}</table>`;
 }
