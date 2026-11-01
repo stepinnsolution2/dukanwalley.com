@@ -184,6 +184,7 @@ export const CATEGORIES: Cat[] = [
       { name: "Men's Shoes", slug: "shoes-men", description: "Formal shoes, loafers, Peshawari chappal, sandals and sneakers for men." },
       { name: "Kids' Shoes", slug: "shoes-kids", description: "School shoes, sandals and sneakers for girls and boys." },
       { name: "Sports Shoes", slug: "shoes-sports", description: "Running, training and sports shoes for workouts, games and daily walking." },
+      { name: "Socks", slug: "shoes-socks", description: "Socks for men, women and kids, sold singly or in packs; sizes are given as shoe-size ranges." },
     ],
   },
   {
@@ -196,8 +197,20 @@ export const CATEGORIES: Cat[] = [
       { name: "Handbags", slug: "bags-accessories-handbags", description: "Shoulder bags, totes, clutches and crossbody bags for everyday use and occasions." },
       { name: "Wallets", slug: "bags-accessories-wallets", description: "Wallets and card holders for men and women." },
       { name: "Backpacks", slug: "bags-accessories-backpacks", description: "Backpacks for school, university, work and travel, including laptop backpacks." },
-      { name: "Belts", slug: "bags-accessories-belts", description: "Leather and casual belts. Check the length and buckle style on each listing." },
+      {
+        name: "Belts",
+        slug: "bags-accessories-belts",
+        description: "Leather and casual belts. Check the length and buckle style on each listing.",
+        attributes: [{ key: "size", name: "Size", dataType: "text", required: false, isVariant: true }],
+      },
       { name: "Sunglasses", slug: "bags-accessories-sunglasses", description: "Sunglasses in different frame styles for men and women." },
+      { name: "Cufflinks", slug: "bags-accessories-cufflinks", description: "Cufflinks for formal shirts, weddings and gifting." },
+      {
+        name: "Shoe & Foot Care",
+        slug: "bags-accessories-shoe-care",
+        description: "Shoe polish, brushes and cleaners, insoles, heel cushions and other foot-care accessories.",
+        attributes: [{ key: "size", name: "Size", dataType: "text", required: false, isVariant: true }],
+      },
     ],
   },
   {
@@ -297,7 +310,13 @@ export const CATEGORIES: Cat[] = [
       { name: "Makeup", slug: "beauty-personal-care-makeup", description: "Foundation, lipstick, eye makeup, nail polish and makeup tools." },
       { name: "Skincare", slug: "beauty-personal-care-skincare", description: "Cleansers, moisturisers, serums and sunscreen for different skin types." },
       { name: "Hair Care", slug: "beauty-personal-care-hair-care", description: "Shampoo, conditioner, hair oil, treatments and styling products and tools." },
-      { name: "Fragrances", slug: "beauty-personal-care-fragrances", description: "Perfumes, attars and body sprays for men and women." },
+      {
+        name: "Fragrances",
+        slug: "beauty-personal-care-fragrances",
+        description: "Perfumes, attars and body sprays for men and women.",
+        // Bottle size as a choice (15 ml, 50 ml, 100 ml…).
+        attributes: [{ key: "size", name: "Size", dataType: "text", required: false, isVariant: true }],
+      },
       { name: "Men's Grooming", slug: "beauty-personal-care-mens-grooming", description: "Trimmers, shaving products, beard care and grooming kits." },
     ],
   },
