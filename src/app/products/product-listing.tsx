@@ -31,7 +31,11 @@ const COLLECTIONS: Record<string, { label: string; where: Prisma.ProductWhereInp
 };
 
 const SORTS = {
-  featured: { label: "Featured", orderBy: [{ featuredPriority: "desc" }, { updatedAt: "desc" }] },
+  // Default: Trending, then Most Popular, then Featured (by priority), then everything else, newest first.
+  featured: {
+    label: "Recommended",
+    orderBy: [{ isHot: "desc" }, { isPopular: "desc" }, { featuredPriority: "desc" }, { updatedAt: "desc" }],
+  },
   newest: { label: "Newest", orderBy: [{ createdAt: "desc" }] },
   price_asc: { label: "Price: low to high", orderBy: [{ basePrice: "asc" }] },
   price_desc: { label: "Price: high to low", orderBy: [{ basePrice: "desc" }] },
