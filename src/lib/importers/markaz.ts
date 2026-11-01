@@ -179,6 +179,16 @@ export function placeProduct(p: MarkazProduct): Placement | null {
   if (/\brings?\b/.test(type)) return place("jewellery-watches-rings");
   if (/bangle|bracelet|kangan/.test(all)) return place("jewellery-watches-bangles-bracelets");
   if (/necklace|artificial set|jewel/.test(all)) return place("jewellery-watches-necklaces-sets");
+  // Home: bedding first ("Razai Set", "Bedspread") so clothing rules below never see them.
+  if (/bed ?spread|bed ?sheet|bedding|razai|rajai|quilts?\b|comforter|duvet|blanket|pillow|mattress|bed ?cover/.test(all)) {
+    return place("home-kitchen-bedding");
+  }
+  if (/curtain|cushion|\brug\b|carpet|door ?mat|table ?(cloth|runner|cover)|sofa ?cover|wall ?(decor|art|clock)|vase|home ?decor/.test(all)) {
+    return place("home-kitchen-home-decor");
+  }
+  if (/cookware|\bpots?\b|\bpans?\b|dinner ?set|crockery|cutlery|kitchen|utensil|lunch ?box|water ?bottle|jug|thermos|container/.test(all)) {
+    return place("home-kitchen-kitchenware");
+  }
   if (/back ?pack|school ?bag|laptop ?bag|rucksack/.test(all)) return place("bags-accessories-backpacks");
   if (/hand ?bag|clutch|purse|tote|shoulder ?bag|cross ?body|sling ?bag/.test(all)) return place("bags-accessories-handbags");
   if (/wallet|card ?holder/.test(type)) return place("bags-accessories-wallets");

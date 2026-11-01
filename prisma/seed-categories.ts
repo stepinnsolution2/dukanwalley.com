@@ -389,7 +389,13 @@ export const CATEGORIES: Cat[] = [
     children: [
       { name: "Kitchenware", slug: "home-kitchen-kitchenware", description: "Cookware, utensils, storage containers, dinner sets and kitchen tools." },
       { name: "Home Décor", slug: "home-kitchen-home-decor", description: "Wall décor, lamps, cushions, rugs and decorative pieces." },
-      { name: "Bedding", slug: "home-kitchen-bedding", description: "Bedsheets, duvets, pillows and blankets; check the bed size on each listing." },
+      {
+        name: "Bedding",
+        slug: "home-kitchen-bedding",
+        description: "Bedsheets, duvets, pillows and blankets; check the bed size on each listing.",
+        // Bed sizes vary by seller (Single, Double, King Size…), so any text is accepted.
+        attributes: [{ key: "size", name: "Size", dataType: "text", required: false, isVariant: true }],
+      },
       {
         name: "Small Appliances",
         slug: "home-kitchen-small-appliances",
