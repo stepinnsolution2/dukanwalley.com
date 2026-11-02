@@ -384,6 +384,16 @@ export const CATEGORIES: Cat[] = [
       { name: "Bags & Sleeves", slug: "computer-accessories-bags-sleeves", description: "Laptop bags, backpacks and sleeves; check the laptop size each one fits." },
       { name: "Chargers & Adapters", slug: "computer-accessories-chargers-adapters", description: "Laptop chargers, USB-C adapters and hubs." },
       { name: "Networking", slug: "computer-accessories-networking", description: "Wi-Fi routers, range extenders, network cables and adapters." },
+      {
+        name: "PC Components",
+        slug: "computer-accessories-pc-components",
+        description: "Processors, motherboards, graphics cards, RAM, coolers, cases and power supplies for building or upgrading a PC.",
+      },
+      {
+        name: "Printers, Scanners & Ink",
+        slug: "computer-accessories-printers",
+        description: "Printers, scanners, toners and ink cartridges; check the cartridge model your printer takes.",
+      },
     ],
   },
   {
@@ -397,6 +407,11 @@ export const CATEGORIES: Cat[] = [
       { name: "Audio & Speakers", slug: "electronics-audio-speakers", description: "Bluetooth speakers, soundbars, home audio and headphones." },
       { name: "Cameras", slug: "electronics-cameras", description: "Cameras, action cameras, security cameras and camera accessories." },
       { name: "Gaming", slug: "electronics-gaming", description: "Gaming consoles, controllers and gaming accessories." },
+      {
+        name: "Office & Power",
+        slug: "electronics-office-power",
+        description: "UPS and power stations, paper shredders, safes, desk phones, presenters and other office equipment.",
+      },
     ],
   },
   {
@@ -419,6 +434,11 @@ export const CATEGORIES: Cat[] = [
         name: "Small Appliances",
         slug: "home-kitchen-small-appliances",
         description: "Blenders, irons, kettles, air fryers and other home appliances, with power and capacity listed by the seller.",
+      },
+      {
+        name: "Large Appliances & ACs",
+        slug: "home-kitchen-large-appliances",
+        description: "Refrigerators, washing machines, air conditioners, water dispensers, geysers, heaters and air purifiers.",
       },
     ],
   },
